@@ -115,6 +115,25 @@
   }
   
   /* =========================================================================
+     MONTHLY BUDGET — edit on demand
+  
+     The card shows the figures plus an Edit button; the input and Save appear only
+     after you choose to edit, and Cancel puts it back without touching anything.
+     ========================================================================= */
+  
+  function toggleBudgetEdit(editing) {
+    const view = document.getElementById('budget-view');
+    const form = document.getElementById('budget-edit');
+    if (!view || !form) return;
+    view.style.display = editing ? 'none' : 'block';
+    form.style.display = editing ? 'block' : 'none';
+    if (editing) {
+      const input = document.getElementById('budget-amount');
+      if (input) { input.focus(); input.select(); }
+    }
+  }
+  
+  /* =========================================================================
      TYPE / SPEAK MODE
      ========================================================================= */
   
@@ -353,4 +372,7 @@
     initCharts();
     initCounter();
     initVoice();
+    /* If the budget save was rejected, reopen the editor so the correction can be
+       made where the error is shown, rather than needing another click. */
+    if (window.location.search.indexOf('err=budget') !== -1) toggleBudgetEdit(true);
   });

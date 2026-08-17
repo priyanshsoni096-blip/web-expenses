@@ -24,33 +24,55 @@
 <div class="row-2">
   <div class="card">
     <div class="card-title">Quick Add Expense</div>
-    <form method="post" action="/quick-add">
+    <form method="post" action="/quick-add" class="card-body">
       <input type="text" name="text" placeholder="e.g. 500 at McDonald's" required
              style="margin-bottom:12px;">
       <button class="btn btn-primary btn-block" type="submit">Add Expense</button>
+      <div class="info-line" style="margin-top:auto;">
+        <span class="ico">&#8505;</span>
+        <span>Several expenses in one line work too &mdash;
+          "500 at McDonald's and 200 for cab". Hindi and Hinglish are fine.</span>
+      </div>
     </form>
   </div>
 
   <div class="card">
     <div class="card-title">Monthly Budget</div>
-    {% if budget > 0 %}
-      <div class="budget-figures">
-        <span class="budget-spent">&#8377;{{ spent_fmt }}</span>
-        <span class="budget-total">/ &#8377;{{ budget_fmt }}</span>
+    <div class="card-body">
+      {% if budget > 0 %}
+        <div class="budget-figures">
+          <span class="budget-spent">&#8377;{{ spent_fmt }}</span>
+          <span class="budget-total">/ &#8377;{{ budget_fmt }}</span>
+        </div>
+        <div class="progress"><div class="progress-fill" style="width: {{ pct }}%"></div></div>
+        <div class="budget-meta">
+          <span>{{ pct }}% used</span><span class="dot">&bull;</span>
+          <span>&#8377;{{ left_fmt }} left</span>
+        </div>
+      {% else %}
+        <div class="page-sub" style="margin:0 0 12px;">No budget set for this month.</div>
+      {% endif %}
+
+      <!-- Read state: just the Edit button. The input and Save only appear once
+           you choose to edit, so the card is not permanently showing a form. -->
+      <div id="budget-view" style="margin-top:auto;">
+        <button class="btn btn-block" type="button" onclick="toggleBudgetEdit(true)">
+          &#9998; Edit Budget</button>
       </div>
-      <div class="progress"><div class="progress-fill" style="width: {{ pct }}%"></div></div>
-      <div class="budget-meta">
-        <span>{{ pct }}% used</span><span class="dot">&bull;</span>
-        <span>&#8377;{{ left_fmt }} left</span>
-      </div>
-    {% else %}
-      <div class="page-sub" style="margin:0 0 12px;">No budget set for this month.</div>
-    {% endif %}
-    <form method="post" action="/budget" class="form-row" style="margin-bottom:0;">
-      <input type="number" name="amount" step="100" min="0" value="{{ budget|int }}"
-             placeholder="Monthly budget" inputmode="numeric">
-      <button class="btn" type="submit">&#9998; Save Budget</button>
-    </form>
+
+      <form method="post" action="/budget" id="budget-edit"
+            style="display:none; margin-top:auto;">
+        <label class="field" for="budget-amount">Monthly budget (&#8377;)</label>
+        <input type="number" name="amount" id="budget-amount" step="100" min="0"
+               value="{{ budget|int }}" placeholder="35000" inputmode="numeric">
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn btn-primary" type="submit" style="flex:1 1 auto;">
+            &#10003; Save</button>
+          <button class="btn" type="button" onclick="toggleBudgetEdit(false)">
+            &#10005; Cancel</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 

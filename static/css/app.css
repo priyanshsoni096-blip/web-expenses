@@ -726,3 +726,22 @@
    .draft-row { display: flex; gap: var(--gap); align-items: flex-end; margin-bottom: var(--gap); flex-wrap: wrap; }
    .draft-row .num-wrap { display: flex; align-items: center; min-height: 44px; }
    .draft-row .grow { flex: 1 1 160px; min-width: 0; }
+   
+   /* --- Equal-height cards in a row ----------------------------------------
+      align-items: stretch makes both cards in a .row-2 as tall as the taller one,
+      measured by the browser. No min-height constant to go stale when the content
+      changes - which is what happened in the Streamlit version, where 198px was the
+      budget card's CLOSED height and it overflowed the moment the editor opened.
+   
+      .card-body then fills that height as a flex column, so a child with
+      margin-top:auto is pushed to the bottom and the card never looks half-empty. */
+   .row-2 { align-items: stretch; }
+   .row-2 > .card, .row-even > .card { margin-bottom: 0; display: flex; flex-direction: column; }
+   .row-2, .row-even { margin-bottom: var(--gap); }
+   
+   .card-body {
+       display: flex;
+       flex-direction: column;
+       flex: 1 1 auto;
+       min-height: 0;
+   }
