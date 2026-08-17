@@ -22,20 +22,29 @@
     <div class="card-title">Expenses by Category
       <button class="expand-btn" type="button" onclick="toggleChart('a-pie')">&#9974;</button>
     </div>
-    <div id="a-pie" class="chart"></div>
+    <div id="a-pie" class="chart" data-chart="donut"
+         data-labels='{{ pie.labels|tojson }}'
+         data-values='{{ pie.data|tojson }}'
+         data-colors='{{ pie.colors|tojson }}'
+         data-total='{{ pie.total|tojson }}'></div>
   </div>
   <div class="card">
     <div class="card-title">Expenses Over Time
       <button class="expand-btn" type="button" onclick="toggleChart('a-trend')">&#9974;</button>
     </div>
-    <div id="a-trend" class="chart"></div>
+    <div id="a-trend" class="chart" data-chart="trend"
+         data-x='{{ trend.x|tojson }}'
+         data-y='{{ trend.y|tojson }}'
+         data-xlabel="Date"></div>
   </div>
 </div>
 
 <div class="row-even">
   <div class="card">
     <div class="card-title">Payment Mode Distribution</div>
-    <div id="a-pm" class="chart"></div>
+    <div id="a-pm" class="chart" data-chart="bars"
+         data-labels='{{ pm_chart.labels|tojson }}'
+         data-values='{{ pm_chart.data|tojson }}'></div>
   </div>
   <div class="card">
     <div class="card-title">Top Merchants</div>
@@ -66,13 +75,4 @@
     {% endfor %}
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  drawDonut('a-pie', {{ pie.labels|tojson }}, {{ pie.data|tojson }},
-            {{ pie.colors|tojson }}, {{ pie.total|tojson }});
-  drawTrend('a-trend', {{ trend.x|tojson }}, {{ trend.y|tojson }}, 'Date');
-  drawBars('a-pm', {{ pm_chart.labels|tojson }}, {{ pm_chart.data|tojson }});
-</script>
 {% endblock %}

@@ -64,9 +64,31 @@ The problems that were hard to fix in Streamlit are ordinary CSS here:
   column can be squeezed below its minimum, so it cannot overflow at any width.
 - **Fluid sizing** — every size that affects layout is `clamp(min, Nvw, max)`.
 
+## Voice input
+
+Present on the Add Expense page, and it now works differently — better.
+
+The Streamlit version recorded audio in the browser, posted it to
+`voice_input.py`, which called `recognize_google()`: Google's free **unkeyed**
+endpoint. That endpoint is unofficial and rate-limited, which is why it failed
+intermittently.
+
+This version uses the browser's own `SpeechRecognition` API. It:
+
+- supports `hi-IN` and `en-IN` natively (language picker next to the button),
+- returns text directly, so no audio is uploaded anywhere,
+- needs no `ffmpeg` and no WAV encoding in JavaScript.
+
+Voice fills the same textarea that typing does, so the parser, the review step
+and the save flow are all shared — one code path, not two.
+
+Works in Chrome, Edge and Safari. Firefox does not implement the API; the button
+disables itself and says so rather than failing silently.
+
+`voice_input.py` is kept in the project in case a server-side path is ever
+wanted, but nothing imports it now.
+
 ## Not carried over
 
-- **Voice input.** `streamlit-mic-recorder` is a Streamlit component. The browser
-  equivalent is `MediaRecorder` plus an upload endpoint calling `voice_input.py`.
-  Ask if you want it — it's roughly 40 lines of JS and one route.
-- **File attachments.** The uploader stub was never wired to storage.
+- **File attachments.** The uploader in the Streamlit version was a stub — it was
+  never wired to any storage backend, so there is nothing to port.

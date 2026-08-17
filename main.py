@@ -116,7 +116,7 @@ def _rows_for_template(df: pd.DataFrame, cats: dict) -> list:
 # --------------------------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
-def dashboard(request: Request):
+def dashboard(request: Request, ok: str = "", err: str = ""):
     df = storage.load_expenses()
     cats = _category_lookup()
     today = datetime.date.today()
@@ -192,26 +192,59 @@ def dashboard(request: Request):
         "insights": insights,
         "categories": list(cats.keys()),
         "payment_modes": PAYMENT_MODES,
+        "flash_ok": {"budget": "Budget saved.", "added": "Expense added."}.get(ok),
+        "flash_err": {
+            "budget": "Enter a number for the budget, e.g. 35000.",
+            "noamount": "No amount detected - include a number, e.g. \"500 at McDonald's\".",
+        }.get(err),
     })
     return templates.TemplateResponse(request, "dashboard.html", ctx)
 
 
 @app.post("/quick-add")
-def quick_add(text: str = Form(...)):
+def quick_add(text: str = Form("")):
     parsed = categorizer.parse_multiple_expenses(text)
+    saved = 0
     for p in parsed:
         if p["amount"] and p["amount"] > 0:
             storage.save_expense({
                 "raw_text": p["raw_text"], "merchant": p["merchant"],
                 "amount": p["amount"], "category": p["category"], "source": "text",
             })
-    return RedirectResponse("/", status_code=303)
+            saved += 1
+    # No amount found means nothing was saved - say so instead of silently
+    # returning to an unchanged page.
+    return RedirectResponse("/?ok=added" if saved else "/?err=noamount", status_code=303)
+
+
+def _parse_money(raw: str) -> Optional[float]:
+    """Parse a money field the way a browser might actually send it.
+
+    `amount: float = Form(...)` rejected an empty field, "40,000" and any typo
+    with HTTP 422 - a raw error page, which is why clicking Save Budget looked
+    like a crash. Commas and spaces are stripped, and None means "unparseable"
+    so the caller can decide rather than the request failing.
+    """
+    if raw is None:
+        return None
+    cleaned = str(raw).strip().replace(",", "").replace(" ", "").replace("\u20b9", "")
+    if not cleaned:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
 
 
 @app.post("/budget")
-def set_budget(amount: float = Form(...)):
-    storage.set_budget(max(amount, 0))
-    return RedirectResponse("/", status_code=303)
+def set_budget(amount: str = Form("")):
+    value = _parse_money(amount)
+    if value is None:
+        # Nothing usable typed - leave the stored budget alone rather than
+        # zeroing it or erroring out.
+        return RedirectResponse("/?err=budget", status_code=303)
+    storage.set_budget(max(value, 0.0))
+    return RedirectResponse("/?ok=budget", status_code=303)
 
 
 # --------------------------------------------------------------------------
@@ -219,12 +252,15 @@ def set_budget(amount: float = Form(...)):
 # --------------------------------------------------------------------------
 
 @app.get("/add", response_class=HTMLResponse)
-def add_page(request: Request, text: str = ""):
+def add_page(request: Request, text: str = "", mode: str = "type"):
     cats = _category_lookup()
     drafts = categorizer.parse_multiple_expenses(text) if text.strip() else []
     ctx = _base_context(request, "add")
     ctx.update({
         "text": text,
+        # Which tab was in use. Carried through the parse round-trip so speaking
+        # an expense does not drop you back on the Type tab afterwards.
+        "mode": "speak" if mode == "speak" else "type",
         "drafts": drafts,
         "categories": list(cats.keys()),
         "payment_modes": PAYMENT_MODES,
@@ -238,9 +274,10 @@ def add_page(request: Request, text: str = ""):
 
 
 @app.post("/add/parse")
-def add_parse(text: str = Form("")):
+def add_parse(text: str = Form(""), mode: str = Form("type")):
     from urllib.parse import quote
-    return RedirectResponse(f"/add?text={quote(text)}", status_code=303)
+    keep = "speak" if mode == "speak" else "type"
+    return RedirectResponse(f"/add?mode={keep}&text={quote(text)}", status_code=303)
 
 
 @app.post("/add/save")

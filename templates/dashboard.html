@@ -7,6 +7,9 @@
   </div>
 </div>
 
+{% if flash_ok %}<div class="flash flash-ok">&#10003; {{ flash_ok }}</div>{% endif %}
+{% if flash_err %}<div class="flash flash-err">&#9888; {{ flash_err }}</div>{% endif %}
+
 <div class="stat-grid">
   {% for s in stats %}
   <div class="stat-card">
@@ -45,7 +48,7 @@
     {% endif %}
     <form method="post" action="/budget" class="form-row" style="margin-bottom:0;">
       <input type="number" name="amount" step="100" min="0" value="{{ budget|int }}"
-             placeholder="Monthly budget">
+             placeholder="Monthly budget" inputmode="numeric">
       <button class="btn" type="submit">&#9998; Save Budget</button>
     </form>
   </div>
@@ -56,13 +59,20 @@
     <div class="card-title">Spending by Category
       <button class="expand-btn" type="button" onclick="toggleChart('pie')">&#9974;</button>
     </div>
-    <div id="pie" class="chart"></div>
+    <div id="pie" class="chart" data-chart="donut"
+         data-labels='{{ pie.labels|tojson }}'
+         data-values='{{ pie.data|tojson }}'
+         data-colors='{{ pie.colors|tojson }}'
+         data-total='{{ pie.total|tojson }}'></div>
   </div>
   <div class="card">
     <div class="card-title">Monthly Trend
       <button class="expand-btn" type="button" onclick="toggleChart('trend')">&#9974;</button>
     </div>
-    <div id="trend" class="chart"></div>
+    <div id="trend" class="chart" data-chart="trend"
+         data-x='{{ trend.x|tojson }}'
+         data-y='{{ trend.y|tojson }}'
+         data-xlabel="Day"></div>
   </div>
 </div>
 
@@ -77,12 +87,4 @@
   <div class="insight"><span class="ico">{{ icon }}</span><span>{{ text }}</span></div>
   {% endfor %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  drawDonut('pie', {{ pie.labels|tojson }}, {{ pie.data|tojson }},
-            {{ pie.colors|tojson }}, {{ pie.total|tojson }});
-  drawTrend('trend', {{ trend.x|tojson }}, {{ trend.y|tojson }}, 'Day');
-</script>
 {% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <div class="page-title">Add Expense</div>
+    <div class="page-sub">Type, speak or pick an example &mdash; we'll parse the rest</div>
+  </div>
+  <button class="btn" type="button" onclick="toggleHelp()">&#10067; How it works?</button>
+</div>
+
+<div class="help-box" id="help-box" style="display:none;">
+  Describe the spend the way you'd say it out loud. Amount, merchant and category
+  are worked out for you, and several expenses in one sentence are split apart.
+  English, Hindi and Hinglish all work &mdash; "500 at McDonald's and 200 for cab",
+  "&#2346;&#2366;&#2306;&#2330; &#2360;&#2380; &#2352;&#2369;&#2346;&#2351;&#2375;", "sabzi 150 aur dudh 60". Nothing is saved until you review it.
+</div>
+
+<!-- Mode toggle: both halves are <button>s with the same box, so the active one
+     cannot sit at a different height from the inactive one. -->
+<div class="mode-toggle">
+  <button class="mode-btn {% if mode != 'speak' %}active{% endif %}" type="button"
+          id="mode-type" onclick="setMode('type')">
+    <span class="ico">&#9000;</span><span>Type</span>
+  </button>
+  <button class="mode-btn {% if mode == 'speak' %}active{% endif %}" type="button"
+          id="mode-speak" onclick="setMode('speak')">
+    <span class="ico">&#127908;</span><span>Speak</span>
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-title" id="step1-title">
+    {% if mode == 'speak' %}1. Speak your expense{% else %}1. Describe your expense{% endif %}
+  </div>
+
+  <!-- SPEAK ------------------------------------------------------------- -->
+  <div id="panel-speak" {% if mode != 'speak' %}style="display:none;"{% endif %}>
+    <div class="mic-stage">
+      <div class="mic-target" id="mic-target" onclick="toggleDictation()">&#127908;</div>
+      <div class="mic-heading">Record your expense</div>
+      <div class="mic-help">
+        Tap to record, mention one or more expenses, tap again to stop.<br>
+        Pick your language below &mdash; Hindi and English both work.
+      </div>
+    </div>
+
+    <div class="record-frame">
+      <button class="btn" type="button" id="voice-btn" onclick="toggleDictation()">
+        &#127908; Start Recording</button>
+      <select id="voice-lang" aria-label="Speech language">
+        <option value="en-IN">English (India)</option>
+        <option value="hi-IN">&#2361;&#2367;&#2306;&#2342;&#2368; (Hindi)</option>
+        <option value="en-GB">English (UK)</option>
+        <option value="en-US">English (US)</option>
+      </select>
+      <div class="voice-status" id="voice-status"></div>
+    </div>
+
+    <div class="transcript" id="transcript" style="display:none;">
+      <span class="ico">&#127908;</span>
+      <span><span id="transcript-text"></span>
+        <span class="lang" id="transcript-lang"></span></span>
+    </div>
+  </div>
+
+  <!-- TYPE -------------------------------------------------------------- -->
+  <div id="panel-type" {% if mode == 'speak' %}style="display:none;"{% endif %}>
+    <label class="field" for="expense-text">Describe your expense (&#2326;&#2352;&#2381;&#2330; &#2325;&#2375; &#2346;&#2352;&#2375; &#2350;&#2375;&#2306; &#2348;&#2340;&#2366;&#2319;&#2306;)</label>
+    <textarea name="text" id="expense-text" maxlength="300" form="parse-form"
+              placeholder="500 at McDonald's and 200 for shopping">{{ text }}</textarea>
+  </div>
+
+  <!-- One form serves both panels: voice fills the same textarea typing does,
+       so the parser, review step and save flow are shared. -->
+  <form method="post" action="/add/parse" id="parse-form">
+    <input type="hidden" name="mode" id="mode-field" value="{{ mode }}">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:var(--gap); margin-top:12px;">
+      <span class="stat-sub" id="counter">0/300</span>
+      <button class="btn btn-primary" type="submit">&crarr; Parse</button>
+    </div>
+  </form>
+
+  <div class="page-sub" style="margin:20px 0 8px;">Try saying something like:</div>
+  <div class="chip-grid">
+    {% for ex in examples_en %}
+    <button type="button" class="chip" onclick="fillExample(this.textContent)">{{ ex }}</button>
+    {% endfor %}
+  </div>
+  <div class="chip-grid" style="margin-top:8px;">
+    {% for ex in examples_hi %}
+    <button type="button" class="chip" onclick="fillExample(this.textContent)">{{ ex }}</button>
+    {% endfor %}
+  </div>
+
+  <div class="info-line">
+    <span class="ico">&#8505;</span>
+    <span>You can mention multiple expenses in one sentence.</span>
+  </div>
+</div>
+
+{% if drafts %}
+<form method="post" action="/add/save">
+  <input type="hidden" name="raw_text" value="{{ text }}">
+
+  <div class="card">
+    <div class="card-title">2. Parsed preview (review &amp; confirm)
+      <span style="color:var(--accent); text-transform:none; letter-spacing:0;">
+        {{ drafts|length }} item(s) detected</span>
+    </div>
+
+    {% for d in drafts %}
+    <div class="draft-row">
+      <div class="num-wrap"><span class="row-num">{{ loop.index }}</span></div>
+      <div class="grow">
+        <label class="field">Merchant</label>
+        <input type="text" name="merchant_{{ loop.index0 }}" value="{{ d.merchant }}">
+      </div>
+      <div class="grow">
+        <label class="field">Amount</label>
+        <input type="number" step="0.01" name="amount_{{ loop.index0 }}"
+               value="{{ '%.2f'|format(d.amount or 0) }}">
+      </div>
+      <div class="grow">
+        <label class="field">Category</label>
+        <select name="category_{{ loop.index0 }}">
+          {% for c in categories %}
+          <option value="{{ c }}" {% if c == d.category %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">3. Details (optional)</div>
+    <div class="form-row">
+      <div><label class="field">Date</label>
+        <input type="date" name="date" value="{{ today }}"></div>
+      <div><label class="field">Payment Mode</label>
+        <select name="payment_mode">
+          {% for p in payment_modes %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+        </select></div>
+      <div><label class="field">Account</label>
+        <input type="text" name="account" placeholder="Optional"></div>
+    </div>
+    <label class="field">Notes</label>
+    <textarea name="notes" placeholder="Add a note (optional)" style="min-height:70px;"></textarea>
+  </div>
+
+  <div style="display:flex; gap:var(--gap); flex-wrap:wrap;">
+    <a class="btn" href="/add?mode={{ mode }}">&#8635; Clear All</a>
+    <button class="btn btn-primary" type="submit" style="flex:1 1 240px;">
+      &#10003; Save Expense ({{ drafts|length }} Items)</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

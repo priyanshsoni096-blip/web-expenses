@@ -10,7 +10,11 @@
 <div class="row-2">
   <div class="card">
     <div class="card-title">Category Breakdown</div>
-    <div id="c-pie" class="chart"></div>
+    <div id="c-pie" class="chart" data-chart="donut"
+         data-labels='{{ pie.labels|tojson }}'
+         data-values='{{ pie.data|tojson }}'
+         data-colors='{{ pie.colors|tojson }}'
+         data-total='{{ pie.total|tojson }}'></div>
   </div>
   <div class="card">
     <div class="card-title">Add a Category</div>
@@ -50,11 +54,4 @@
   </div>
   {% endfor %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  drawDonut('c-pie', {{ pie.labels|tojson }}, {{ pie.data|tojson }},
-            {{ pie.colors|tojson }}, {{ pie.total|tojson }});
-</script>
 {% endblock %}

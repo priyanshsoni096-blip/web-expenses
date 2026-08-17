@@ -1,0 +1,728 @@
+/* =========================================================================
+   Smart Expense Tracker — stylesheet
+
+   Everything here styles elements we own. No framework internals, no guessing
+   at generated class names, no !important arms race. The layout problems that
+   took many rounds to chase in the Streamlit version are three or four lines
+   each here, and they are noted where they appear.
+   ========================================================================= */
+
+   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+   :root {
+       /* palette — unchanged from the original design */
+       --bg: #0B0E14;
+       --surface: #12161F;
+       --surface-2: #171C27;
+       --border: #232A38;
+       --text: #E6E9EF;
+       --muted: #7C8494;
+       --accent: #22C55E;
+       --accent-soft: #16351F;
+       --red: #F87171;
+       --red-soft: #3A1A1A;
+   
+       /* --- FLUID SCALE ------------------------------------------------------
+          clamp(min, preferred, max). The vw term tracks the viewport; the bounds
+          stop it becoming unreadable when narrow or absurd when wide. Nothing that
+          affects layout is a single fixed number. */
+       --fs-page-title: clamp(18px, 1.6vw, 28px);
+       --fs-page-sub: clamp(11px, 0.95vw, 14px);
+       --fs-label: clamp(9px, 0.78vw, 11px);
+       --fs-body: clamp(11.5px, 0.92vw, 13.5px);
+       --fs-value: clamp(16px, 1.4vw, 24px);
+       --fs-small: clamp(9px, 0.72vw, 10.5px);
+   
+       --gap: clamp(10px, 1vw, 18px);
+       --card-pad: clamp(14px, 1.25vw, 22px);
+       --radius: 12px;
+       --sidebar-w: clamp(210px, 17vw, 280px);
+       --chart-h: clamp(200px, 20vw, 300px);
+   }
+   
+   * { box-sizing: border-box; }
+   
+   html, body {
+       margin: 0;
+       padding: 0;
+       background: var(--bg);
+       color: var(--text);
+       font-family: 'JetBrains Mono', ui-monospace, monospace;
+       font-size: var(--fs-body);
+       -webkit-font-smoothing: antialiased;
+   }
+   
+   a { color: inherit; text-decoration: none; }
+   
+   /* =========================================================================
+      APP SHELL
+      ========================================================================= */
+   
+   .app {
+       display: flex;
+       min-height: 100dvh;
+   }
+   
+   /* --- Sidebar -------------------------------------------------------------
+      The profile card sits at the bottom because the sidebar is a flex column and
+      the card has margin-top:auto. That is the whole mechanism. It cannot overlap
+      the nav, because it is in normal flow: if it grows, the gap above it shrinks.
+   
+      Compare the Streamlit version, where this needed position:absolute against an
+      ancestor we could not identify, then a spacer sized from estimated heights,
+      then :has() with a min-height that made the sidebar scroll. */
+   .sidebar {
+       width: var(--sidebar-w);
+       flex: 0 0 var(--sidebar-w);
+       background: var(--surface);
+       border-right: 1px solid var(--border);
+       padding: var(--card-pad);
+       display: flex;
+       flex-direction: column;
+       position: sticky;
+       top: 0;
+       height: 100dvh;
+       overflow-y: auto;
+   }
+   
+   .brand {
+       display: flex;
+       gap: 12px;
+       align-items: flex-start;
+       padding-bottom: 16px;
+       border-bottom: 1px solid var(--border);
+       margin-bottom: 14px;
+   }
+   
+   .brand-icon {
+       width: 38px;
+       height: 38px;
+       flex: 0 0 38px;
+       border: 1.5px solid var(--accent);
+       border-radius: 10px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       color: var(--accent);
+       font-weight: 700;
+       font-size: 17px;
+   }
+   
+   .brand-title {
+       font-size: clamp(13px, 1.1vw, 16px);
+       font-weight: 700;
+       line-height: 1.15;
+       letter-spacing: 0.02em;
+   }
+   
+   .brand-sub {
+       font-size: var(--fs-small);
+       color: var(--accent);
+       letter-spacing: 0.14em;
+       margin-top: 5px;
+   }
+   
+   .nav { display: flex; flex-direction: column; gap: 4px; }
+   
+   /* The icon is a fixed-width flex item, so every label starts at the same x
+      whatever the emoji's advance width. In the Streamlit version this needed a
+      CSS ::before injected per nav key. */
+   .nav-item {
+       display: flex;
+       align-items: center;
+       gap: 10px;
+       padding: 10px 12px;
+       border-radius: 8px;
+       color: var(--muted);
+       font-size: var(--fs-body);
+       min-height: 40px;
+       transition: background 0.12s, color 0.12s;
+   }
+   
+   .nav-item .ico {
+       width: 20px;
+       flex: 0 0 20px;
+       text-align: center;
+       font-size: 14px;
+       line-height: 1;
+   }
+   
+   .nav-item:hover { background: var(--surface-2); color: var(--text); }
+   
+   .nav-item.active {
+       background: var(--accent-soft);
+       color: var(--accent);
+       font-weight: 600;
+       /* inset shadow rather than border-left, so the accent bar takes no layout
+          space and the label does not shift 3px when a page becomes active */
+       box-shadow: inset 3px 0 0 var(--accent);
+   }
+   
+   .sidebar-footer {
+       margin-top: auto;          /* <- this is the entire bottom-pinning fix */
+       padding-top: 16px;
+   }
+   
+   .profile {
+       display: flex;
+       align-items: center;
+       gap: 10px;
+       background: var(--surface-2);
+       border: 1px solid var(--border);
+       border-radius: 10px;
+       padding: 10px 12px;
+       min-width: 0;
+   }
+   
+   .avatar {
+       width: 32px;
+       height: 32px;
+       flex: 0 0 32px;
+       border-radius: 50%;
+       background: var(--accent-soft);
+       color: var(--accent);
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       font-weight: 700;
+       font-size: 12px;
+   }
+   
+   /* min-width:0 lets the text shrink below its content width, which is what
+      allows the ellipsis to engage at all */
+   .profile-text { min-width: 0; }
+   .profile-name {
+       font-size: 12px;
+       font-weight: 600;
+       white-space: nowrap;
+       overflow: hidden;
+       text-overflow: ellipsis;
+   }
+   .profile-sub { font-size: var(--fs-small); color: var(--muted); }
+   
+   /* --- Main ---------------------------------------------------------------- */
+   
+   .main {
+       flex: 1 1 auto;
+       min-width: 0;              /* stops long content forcing the page wider */
+       padding: clamp(18px, 2vw, 40px);
+       max-width: 1600px;
+   }
+   
+   .page-title { font-size: var(--fs-page-title); font-weight: 700; }
+   .page-sub { font-size: var(--fs-page-sub); color: var(--muted); margin: 4px 0 22px; }
+   
+   .page-head {
+       display: flex;
+       justify-content: space-between;
+       align-items: flex-start;
+       gap: var(--gap);
+       flex-wrap: wrap;
+   }
+   
+   /* =========================================================================
+      CARDS + GRIDS
+      ========================================================================= */
+   
+   .card {
+       background: var(--surface);
+       border: 1px solid var(--border);
+       border-radius: var(--radius);
+       padding: var(--card-pad);
+       margin-bottom: var(--gap);
+   }
+   
+   .card-title {
+       font-size: var(--fs-label);
+       letter-spacing: 0.1em;
+       text-transform: uppercase;
+       color: var(--muted);
+       font-weight: 700;
+       padding-bottom: 10px;
+       margin-bottom: 14px;
+       border-bottom: 1px solid var(--border);
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+       gap: 10px;
+   }
+   
+   /* auto-fit: the browser decides how many columns fit, and collapses empty
+      tracks so N cards always fill the row at equal width. No breakpoints. */
+   .stat-grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(clamp(160px, 15vw, 220px), 1fr));
+       gap: var(--gap);
+       margin-bottom: var(--gap);
+   }
+   
+   .stat-card {
+       background: var(--surface);
+       border: 1px solid var(--border);
+       border-radius: 10px;
+       padding: var(--card-pad);
+       min-width: 0;
+   }
+   
+   .stat-icon { font-size: 17px; margin-bottom: 10px; }
+   .stat-label { font-size: var(--fs-label); color: var(--muted); }
+   .stat-value {
+       font-size: var(--fs-value);
+       font-weight: 700;
+       margin: 6px 0 4px;
+       overflow-wrap: anywhere;
+   }
+   .stat-sub { font-size: var(--fs-small); color: var(--muted); overflow-wrap: anywhere; }
+   
+   /* Two-column page sections. minmax(0,Nfr) is what lets them actually shrink;
+      without the 0 minimum a wide child would push the column past its share. */
+   .row-2 {
+       display: grid;
+       grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+       gap: var(--gap);
+       align-items: start;
+   }
+   .row-even {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+       gap: var(--gap);
+   }
+   
+   @media (max-width: 900px) {
+       .row-2 { grid-template-columns: minmax(0, 1fr); }
+   }
+   
+   /* =========================================================================
+      FORMS
+      ========================================================================= */
+   
+   label.field { display: block; font-size: var(--fs-label); color: var(--muted); margin-bottom: 6px; }
+   
+   input[type="text"], input[type="number"], input[type="date"], select, textarea {
+       width: 100%;
+       background: var(--surface-2);
+       border: 1px solid var(--border);
+       border-radius: 8px;
+       color: var(--text);
+       font-family: inherit;
+       font-size: var(--fs-body);
+       padding: 11px 13px;
+       outline: none;
+   }
+   
+   input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+   textarea { resize: vertical; min-height: 96px; }
+   ::placeholder { color: var(--muted); opacity: 1; }
+   
+   .btn {
+       display: inline-flex;
+       align-items: center;
+       justify-content: center;
+       gap: 8px;
+       background: var(--surface-2);
+       border: 1px solid var(--border);
+       border-radius: 8px;
+       color: var(--text);
+       font-family: inherit;
+       font-size: var(--fs-body);
+       padding: 11px 16px;
+       cursor: pointer;
+       min-height: 42px;
+       transition: background 0.12s, border-color 0.12s;
+   }
+   
+   .btn:hover { border-color: var(--accent); color: var(--accent); }
+   .btn-primary { background: var(--accent); border-color: var(--accent); color: #06170C; font-weight: 700; }
+   .btn-primary:hover { background: #1EA750; border-color: #1EA750; color: #06170C; }
+   .btn-block { width: 100%; }
+   .btn-icon { padding: 8px 10px; min-height: 36px; min-width: 36px; }
+   .btn-danger:hover { border-color: var(--red); color: var(--red); }
+   .btn-link {
+       background: none; border: none; color: var(--muted);
+       font-size: var(--fs-small); padding: 0; min-height: 0; cursor: pointer;
+   }
+   .btn-link:hover { color: var(--accent); }
+   
+   .form-row {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+       gap: var(--gap);
+       margin-bottom: var(--gap);
+   }
+   
+   .chip-grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+       gap: 8px;
+   }
+   
+   .chip {
+       background: var(--surface-2);
+       border: 1px solid var(--border);
+       border-radius: 8px;
+       padding: 9px 10px;
+       font-size: var(--fs-small);
+       color: var(--muted);
+       text-align: center;
+       cursor: pointer;
+       font-family: inherit;
+       min-height: 40px;
+       /* labels wrap inside the chip instead of overflowing it */
+       white-space: normal;
+       overflow-wrap: anywhere;
+       line-height: 1.3;
+   }
+   .chip:hover { border-color: var(--accent); color: var(--accent); }
+   
+   /* =========================================================================
+      EXPENSE TABLE
+      Real CSS grid with per-column minimums, inside a container query. Reflows to
+      two lines with inline field labels before any column can be squeezed below
+      its minimum — so it can never overflow, at any width, with the sidebar open
+      or collapsed.
+      ========================================================================= */
+   
+   .table-wrap { container-type: inline-size; }
+   
+   .exp-row {
+       display: grid;
+       grid-template-columns:
+           minmax(90px, 1.15fr)    /* date     */
+           minmax(120px, 2.4fr)    /* merchant */
+           minmax(120px, 1.6fr)    /* category */
+           minmax(80px, 1fr)       /* amount   */
+           minmax(86px, 1.1fr)     /* payment  */
+           88px;                   /* actions  */
+       gap: 12px;
+       align-items: center;
+       padding: 10px 0;
+       border-bottom: 1px solid var(--border);
+   }
+   
+   .exp-head {
+       border-bottom: 1px solid var(--border);
+       padding-bottom: 8px;
+       font-size: var(--fs-label);
+       text-transform: uppercase;
+       letter-spacing: 0.05em;
+       color: var(--muted);
+       font-weight: 700;
+   }
+   
+   .exp-cell { min-width: 0; }
+   .exp-cell-label { display: none; }
+   
+   .exp-merchant { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+   .exp-note {
+       font-size: var(--fs-small); color: var(--muted); font-style: italic;
+       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+   }
+   .exp-amount { font-weight: 700; color: var(--accent); white-space: nowrap; }
+   .exp-actions { display: flex; gap: 6px; justify-content: flex-end; }
+   
+   .tag {
+       display: inline-flex;
+       align-items: center;
+       gap: 5px;
+       font-size: var(--fs-small);
+       text-transform: uppercase;
+       padding: 4px 9px;
+       border-radius: 5px;
+       font-weight: 600;
+       border: 1px solid currentColor;
+       max-width: 100%;
+       overflow: hidden;
+       text-overflow: ellipsis;
+       white-space: nowrap;
+   }
+   
+   /* 660px is above the sum of the column minimums plus gaps, so the reflow always
+      happens before the grid can be strained. */
+   @container (max-width: 660px) {
+       .exp-head { display: none; }
+       .exp-row {
+           grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+           row-gap: 6px;
+           padding: 14px 0;
+       }
+       .exp-cell-merchant { grid-column: 1 / -1; order: -1; }
+       .exp-actions { grid-column: 1 / -1; justify-content: flex-start; }
+       .exp-cell-label {
+           display: block;
+           font-size: 9px;
+           letter-spacing: 0.06em;
+           text-transform: uppercase;
+           color: var(--muted);
+           margin-bottom: 3px;
+       }
+       .exp-merchant, .exp-note { white-space: normal; }
+   }
+   
+   /* =========================================================================
+      MISC COMPONENTS
+      ========================================================================= */
+   
+   .budget-figures { display: flex; align-items: baseline; gap: 8px; }
+   .budget-spent { font-size: var(--fs-value); font-weight: 700; }
+   .budget-total { font-size: var(--fs-page-sub); color: var(--muted); }
+   
+   .progress {
+       height: 8px;
+       background: var(--surface-2);
+       border-radius: 999px;
+       overflow: hidden;
+       margin: 10px 0 8px;
+   }
+   /* width is set inline from the computed percentage — one number, one source */
+   .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; }
+   
+   .budget-meta {
+       display: flex;
+       align-items: center;
+       gap: 10px;
+       font-size: var(--fs-small);
+       color: var(--text);
+       margin-bottom: 12px;
+   }
+   .budget-meta .dot { color: var(--muted); }
+   
+   .insight { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; }
+   .insight .ico { width: 18px; flex: 0 0 18px; text-align: center; }
+   
+   .merchant-row {
+       display: grid;
+       grid-template-columns: 1fr auto;
+       gap: 12px;
+       align-items: center;
+       padding: 9px 0;
+       border-bottom: 1px solid var(--border);
+   }
+   .merchant-row:last-child { border-bottom: none; }
+   .merchant-name { display: flex; align-items: center; gap: 9px; min-width: 0; }
+   .merchant-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+   .rank {
+       width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%;
+       background: var(--accent-soft); color: var(--accent);
+       display: flex; align-items: center; justify-content: center;
+       font-size: 10px; font-weight: 700;
+   }
+   
+   .tile-grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+       gap: var(--gap);
+   }
+   .tile-label { font-size: var(--fs-label); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 700; }
+   .tile-value { font-size: var(--fs-value); font-weight: 700; margin-top: 7px; overflow-wrap: anywhere; }
+   .tile-sub { font-size: var(--fs-small); color: var(--muted); margin-top: 3px; }
+   
+   .pagination { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 16px; }
+   .pagination .btn { min-width: 38px; min-height: 36px; padding: 6px 10px; }
+   .pagination .current { background: var(--accent); border-color: var(--accent); color: #06170C; font-weight: 700; }
+   .pagination .gap { color: var(--muted); padding: 0 4px; }
+   .pagination .count { margin-left: auto; font-size: var(--fs-small); color: var(--muted); }
+   
+   .empty { color: var(--muted); text-align: center; padding: 36px 0; font-size: var(--fs-body); }
+   
+   .chart { width: 100%; height: var(--chart-h); }
+   .chart.fullscreen { height: clamp(340px, 42vw, 640px); }
+   
+   .expand-btn {
+       background: none; border: 1px solid var(--border); border-radius: 6px;
+       color: var(--muted); cursor: pointer; padding: 3px 7px; font-size: 12px;
+   }
+   .expand-btn:hover { color: var(--accent); border-color: var(--accent); }
+   
+   .toolbar { display: flex; gap: var(--gap); flex-wrap: wrap; align-items: flex-end; margin-bottom: var(--gap); }
+   .toolbar > * { flex: 1 1 180px; min-width: 0; }
+   .toolbar .actions { flex: 0 0 auto; display: flex; gap: 8px; }
+   
+   /* --- Narrow screens ------------------------------------------------------ */
+   @media (max-width: 760px) {
+       .app { flex-direction: column; }
+       .sidebar {
+           width: 100%; flex: none; height: auto; position: static;
+           border-right: none; border-bottom: 1px solid var(--border);
+       }
+       .nav { flex-direction: row; flex-wrap: wrap; }
+       .nav-item { flex: 1 1 auto; }
+       .sidebar-footer { margin-top: 16px; }
+   }
+   
+   /* --- Voice input --------------------------------------------------------- */
+   .voice-panel {
+       display: flex;
+       align-items: center;
+       gap: var(--gap);
+       flex-wrap: wrap;
+       padding: 14px;
+       background: var(--surface-2);
+       border: 1px solid var(--border);
+       border-radius: 10px;
+       margin-bottom: var(--gap);
+   }
+   .voice-panel select { flex: 0 1 190px; }
+   .voice-status { flex: 1 1 100%; font-size: var(--fs-small); color: var(--muted); min-height: 16px; }
+   
+   .btn.recording {
+       background: var(--red-soft);
+       border-color: var(--red);
+       color: var(--red);
+       animation: pulse 1.4s ease-in-out infinite;
+   }
+   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+   
+   /* --- Flash messages ------------------------------------------------------ */
+   .flash {
+       border-radius: 10px;
+       padding: 11px 14px;
+       margin-bottom: var(--gap);
+       font-size: var(--fs-body);
+       border: 1px solid;
+   }
+   .flash-ok { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+   .flash-err { background: var(--red-soft); border-color: var(--red); color: var(--red); }
+   
+   /* =========================================================================
+      ADD EXPENSE — Type / Speak modes
+      Rebuilt to match the original Streamlit layout: a two-button mode toggle, a
+      pulsing mic target, framed record control, example chips and a transcript
+      readout.
+      ========================================================================= */
+   
+   .mode-toggle {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+       gap: var(--gap);
+       margin-bottom: var(--gap);
+   }
+   
+   /* Both halves are the same element type, so they cannot sit at different
+      heights the way a styled div next to a button did in the old version. */
+   .mode-btn {
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       gap: 10px;
+       min-height: 46px;
+       padding: 11px 16px;
+       border-radius: 8px;
+       border: 1px solid var(--border);
+       background: var(--surface-2);
+       color: var(--muted);
+       font-family: inherit;
+       font-size: var(--fs-body);
+       font-weight: 600;
+       cursor: pointer;
+   }
+   .mode-btn .ico { width: 18px; flex: 0 0 18px; text-align: center; }
+   .mode-btn:hover { border-color: var(--accent); color: var(--text); }
+   .mode-btn.active {
+       background: var(--accent);
+       border-color: var(--accent);
+       color: #06170C;
+       font-weight: 700;
+   }
+   
+   .mic-stage { text-align: center; padding: 10px 0 4px; }
+   
+   .mic-target {
+       position: relative;
+       width: 74px;
+       height: 74px;
+       margin: 0 auto 14px;
+       border-radius: 50%;
+       background: var(--accent-soft);
+       border: 1.5px solid var(--accent);
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       font-size: 26px;
+       cursor: pointer;
+   }
+   .mic-target::after {
+       content: "";
+       position: absolute;
+       inset: -8px;
+       border-radius: 50%;
+       border: 1.5px solid var(--accent);
+       opacity: 0;
+   }
+   .mic-target.live::after { animation: ring-out 1.9s ease-out infinite; }
+   @keyframes ring-out {
+       0%   { transform: scale(0.85); opacity: 0.75; }
+       100% { transform: scale(1.35); opacity: 0; }
+   }
+   
+   .mic-heading {
+       font-size: var(--fs-label);
+       letter-spacing: 0.12em;
+       text-transform: uppercase;
+       font-weight: 700;
+       margin-bottom: 8px;
+   }
+   .mic-help { font-size: var(--fs-small); color: var(--muted); line-height: 1.7; }
+   
+   .record-frame {
+       background: var(--surface-2);
+       border: 1px solid var(--border);
+       border-radius: 10px;
+       padding: 18px;
+       margin: 18px 0;
+       display: flex;
+       flex-direction: column;
+       align-items: center;
+       gap: 10px;
+   }
+   .record-frame .btn { min-width: min(100%, 260px); }
+   .record-frame select { max-width: min(100%, 260px); }
+   
+   .voice-status { font-size: var(--fs-small); color: var(--muted); min-height: 18px; text-align: center; }
+   .voice-status.error { color: var(--red); }
+   .voice-status.live { color: var(--accent); }
+   
+   .transcript {
+       display: flex;
+       gap: 10px;
+       align-items: flex-start;
+       background: var(--surface-2);
+       border: 1px solid var(--border);
+       border-radius: 8px;
+       padding: 11px 13px;
+       margin-top: 14px;
+       font-size: var(--fs-body);
+   }
+   .transcript .ico { width: 18px; flex: 0 0 18px; text-align: center; }
+   .transcript .lang { color: var(--muted); font-size: var(--fs-small); }
+   
+   .info-line {
+       display: flex;
+       gap: 10px;
+       align-items: flex-start;
+       font-size: var(--fs-small);
+       color: var(--muted);
+       margin-top: 14px;
+   }
+   .info-line .ico { width: 18px; flex: 0 0 18px; text-align: center; }
+   
+   .help-box {
+       background: var(--surface-2);
+       border: 1px solid var(--border);
+       border-left: 3px solid var(--accent);
+       border-radius: 8px;
+       padding: 13px 15px;
+       margin-bottom: var(--gap);
+       font-size: var(--fs-small);
+       color: var(--muted);
+       line-height: 1.8;
+   }
+   
+   .row-num {
+       width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%;
+       background: var(--accent-soft); color: var(--accent);
+       display: flex; align-items: center; justify-content: center;
+       font-size: 11px; font-weight: 700;
+   }
+   .draft-row { display: flex; gap: var(--gap); align-items: flex-end; margin-bottom: var(--gap); flex-wrap: wrap; }
+   .draft-row .num-wrap { display: flex; align-items: center; min-height: 44px; }
+   .draft-row .grow { flex: 1 1 160px; min-width: 0; }
