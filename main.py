@@ -151,6 +151,24 @@ def _base_context(request: Request, active: str) -> dict:
     }
 
 
+def _text(value) -> str:
+    """Coerce a DataFrame cell to a plain string, treating NaN/None as empty.
+
+    Belt and braces alongside the fillna in storage.load_expenses: a NaN reaching
+    a template is invisible in the source but renders as the literal text "nan"
+    and makes `{% if %}` take the truthy branch.
+    """
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    text = str(value).strip()
+    return "" if text.lower() == "nan" else text
+
+
 def _rows_for_template(df: pd.DataFrame, cats: dict) -> list:
     """DataFrame -> list of plain dicts the template can render.
 
@@ -165,7 +183,7 @@ def _rows_for_template(df: pd.DataFrame, cats: dict) -> list:
             "date": r["date"].strftime("%d %b %Y") if pd.notnull(r["date"]) else "—",
             "date_iso": r["date"].strftime("%Y-%m-%d") if pd.notnull(r["date"]) else "",
             "merchant": r["merchant"],
-            "notes": r.get("notes") or "",
+            "notes": _text(r.get("notes")),
             "category": r["category"],
             "cat_icon": cat.get("icon", "•"),
             "cat_color": cat.get("color", "#9CA3AF"),
@@ -173,8 +191,10 @@ def _rows_for_template(df: pd.DataFrame, cats: dict) -> list:
             "amount_fmt": f"{float(r['amount'] or 0):,.2f}",
             "payment_mode": r.get("payment_mode") or "Cash",
             "payment_icon": PAYMENT_ICONS.get(r.get("payment_mode") or "Cash", "💵"),
-            "receipt": r.get("receipt") or "",
-            "receipt_name": r.get("receipt_name") or "",
+            # _text() rather than `or ""`, so a NaN from an older document
+            # cannot make the paperclip link appear on an expense with no bill.
+            "receipt": _text(r.get("receipt")),
+            "receipt_name": _text(r.get("receipt_name")),
         })
     return rows
 

@@ -132,7 +132,15 @@ def load_expenses() -> pd.DataFrame:
         if col not in df.columns:
             df[col] = "" if col not in ("amount",) else 0.0
     df["payment_mode"] = df["payment_mode"].fillna("Cash").replace("", "Cash")
-    df["notes"] = df["notes"].fillna("")
+
+    # Fill every text column, not just notes. When some documents predate a field
+    # (receipt, for instance) pandas leaves NaN in those rows - and NaN is TRUTHY
+    # in Python, so `value or ""` does not replace it and templates treat the row
+    # as having a value. That is what made a paperclip link appear on expenses
+    # with no attachment, pointing at the string "nan".
+    text_columns = [c for c in columns if c not in ("amount", "date")]
+    for col in text_columns:
+        df[col] = df[col].fillna("").astype(str).replace("nan", "")
     return df
 
 

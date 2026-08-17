@@ -13,7 +13,7 @@
     <div class="exp-cell exp-cell-merchant">
       <div class="exp-cell-label">Merchant</div>
       <div class="exp-merchant">{{ r.merchant }}
-        {% if r.receipt %}<a href="{{ r.receipt }}" target="_blank" rel="noopener"
+        {% if r.receipt and r.receipt.startswith('data:') %}<a href="{{ r.receipt }}" target="_blank" rel="noopener"
            class="receipt-link" title="{{ r.receipt_name or 'View receipt' }}">&#128206;</a>{% endif %}
       </div>
       {% if r.notes %}<div class="exp-note">{{ r.notes }}</div>{% endif %}
