@@ -16,8 +16,8 @@ ordinary CSS. A sidebar that pins its footer to the bottom is three lines of
 flexbox instead of four failed attempts at overriding a framework's internals.
 """
 
-import calendar
 import datetime
+import os
 import io
 import csv
 from typing import Optional
@@ -34,6 +34,25 @@ import storage
 app = FastAPI(title="Smart Expense Tracker")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+
+def asset_version() -> str:
+    """Cache-busting token derived from the CSS/JS modification times.
+
+    Browsers cache /static/css/app.css aggressively, so editing the file changed
+    nothing on screen until a hard refresh - and a stale stylesheet looks exactly
+    like a broken one, which cost a debugging round. Appending ?v=<mtime> means
+    the URL itself changes whenever a file changes, so the browser is forced to
+    refetch. Recomputed per request, which is what you want while developing;
+    it's two stat() calls.
+    """
+    stamp = 0
+    for rel in ("static/css/app.css", "static/js/app.js"):
+        try:
+            stamp = max(stamp, int(os.path.getmtime(rel)))
+        except OSError:
+            pass
+    return str(stamp)
 
 PAYMENT_MODES = ["Cash", "UPI", "Card", "Other"]
 PAYMENT_ICONS = {"Cash": "💵", "UPI": "📱", "Card": "💳", "Other": "🔁"}
@@ -78,6 +97,7 @@ def _greeting() -> str:
 def _base_context(request: Request, active: str) -> dict:
     return {
         "request": request,
+        "asset_v": asset_version(),
         "nav_items": NAV_ITEMS,
         "active": active,
         "user_name": USER_NAME,
