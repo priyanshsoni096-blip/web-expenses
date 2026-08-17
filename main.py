@@ -38,6 +38,27 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
+@app.middleware("http")
+async def no_page_cache(request: Request, call_next):
+    """Stop the browser caching rendered HTML.
+
+    Static files carry a ?v= token so they refresh when edited, but the HTML had
+    no such marker - so Chrome kept serving a stored copy of /add and the page
+    still showed the old button text long after the template was fixed. The
+    server was demonstrably sending the new markup; the browser just never asked
+    for it.
+
+    Only HTML is affected. CSS and JS keep their long cache plus the version
+    token, which is what makes them fast AND correct.
+    """
+    response = await call_next(request)
+    ctype = response.headers.get("content-type", "")
+    if ctype.startswith("text/html"):
+        response.headers["Cache-Control"] = "no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
+
 def asset_version() -> str:
     """Cache-busting token derived from the CSS/JS modification times.
 
