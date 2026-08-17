@@ -57,9 +57,12 @@
       <div class="voice-status" id="voice-status"></div>
     </div>
 
-    <div class="transcript" id="transcript" style="display:none;">
+    <!-- Rendered server-side when text is present so it survives the parse
+         round-trip, and shown by JS the moment speech finalises. -->
+    <div class="transcript" id="transcript"
+         {% if not (mode == 'speak' and text.strip()) %}style="display:none;"{% endif %}>
       <span class="ico">&#127908;</span>
-      <span><span id="transcript-text"></span>
+      <span><span id="transcript-text">{% if text.strip() %}"{{ text }}"{% endif %}</span>
         <span class="lang" id="transcript-lang"></span></span>
     </div>
   </div>
@@ -98,6 +101,12 @@
     <span>You can mention multiple expenses in one sentence.</span>
   </div>
 </div>
+
+{% if no_amount %}
+<div class="flash flash-err">
+  &#9888; No amount found in "{{ text }}". Include a number &mdash; e.g. "500 at McDonald's".
+</div>
+{% endif %}
 
 {% if drafts %}
 <form method="post" action="/add/save">

@@ -274,7 +274,14 @@ def set_budget(amount: str = Form("")):
 @app.get("/add", response_class=HTMLResponse)
 def add_page(request: Request, text: str = "", mode: str = "type"):
     cats = _category_lookup()
-    drafts = categorizer.parse_multiple_expenses(text) if text.strip() else []
+
+    # Only keep drafts that actually found an amount. Parsing text with no number
+    # in it returns one row of (None, "Unknown", "Other"), which rendered as a
+    # real draft showing "Unknown / 0.00 / Other" - indistinguishable from a stale
+    # result and impossible to save meaningfully.
+    parsed = categorizer.parse_multiple_expenses(text) if text.strip() else []
+    drafts = [d for d in parsed if d.get("amount") and d["amount"] > 0]
+    no_amount = bool(text.strip()) and not drafts
     ctx = _base_context(request, "add")
     ctx.update({
         "text": text,
@@ -282,6 +289,7 @@ def add_page(request: Request, text: str = "", mode: str = "type"):
         # an expense does not drop you back on the Type tab afterwards.
         "mode": "speak" if mode == "speak" else "type",
         "drafts": drafts,
+        "no_amount": no_amount,
         "categories": list(cats.keys()),
         "payment_modes": PAYMENT_MODES,
         "today": datetime.date.today().isoformat(),

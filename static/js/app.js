@@ -243,7 +243,12 @@
       if (box && heard) { box.value = heard; updateCounter(); }
       if (finalText) {
         showTranscript(finalText.trim(), langLabel);
-        setVoiceStatus('Got it. Press Parse to review.', 'live');
+        /* Parse automatically. Previously the transcript appeared but the preview
+           below still showed the PREVIOUS parse, because the preview is rendered
+           server-side and only refreshes on submit - so it looked like speaking
+           had done nothing. Submitting for the user removes that gap entirely. */
+        setVoiceStatus('Heard "' + finalText.trim() + '" \u2014 parsing\u2026', 'live');
+        submitParse();
       }
     };
   
@@ -279,6 +284,21 @@
       listening = false;
       setRecordingUI(false);
     }
+  }
+  
+  let parseSubmitted = false;
+  
+  function submitParse() {
+    /* Guarded: onresult can fire more than once for the same utterance, and a
+       double submit would post the form twice. */
+    if (parseSubmitted) return;
+    const form = document.getElementById('parse-form');
+    const box = document.getElementById('expense-text');
+    if (!form || !box || !box.value.trim()) return;
+    parseSubmitted = true;
+    stopDictation();
+    /* Brief pause so the transcript is legible before the page navigates. */
+    window.setTimeout(function () { form.submit(); }, 700);
   }
   
   function stopDictation() {
