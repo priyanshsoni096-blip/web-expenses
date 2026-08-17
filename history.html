@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="page-title">History</div>
+    <div class="page-sub">{{ count }} expense(s) matching your filters</div>
+  </div>
+  <a class="btn" href="/export">&#11015; Export CSV</a>
+</div>
+
+<div class="stat-grid">
+  {% for s in stats %}
+  <div class="stat-card">
+    <div class="stat-label">{{ s.label }}</div>
+    <div class="stat-value">{{ s.value }}</div>
+    <div class="stat-sub">{{ s.sub }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <form method="get" action="/history" class="toolbar">
+    <div>
+      <label class="field">Search</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Merchant or note...">
+    </div>
+    <div>
+      <label class="field">Date Range</label>
+      <select name="period">
+        {% for p in periods %}<option value="{{ p }}" {% if p == period %}selected{% endif %}>{{ p }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="field">Category</label>
+      <select name="category">
+        <option value="All">All Categories</option>
+        {% for c in categories %}<option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="field">Payment Mode</label>
+      <select name="payment">
+        <option value="All">All</option>
+        {% for p in payment_modes %}<option value="{{ p }}" {% if p == payment %}selected{% endif %}>{{ p }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="actions"><button class="btn" type="submit">Apply</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-title">All Expenses ({{ count }})</div>
+  {% with back_url = '/history' %}{% include "partials/expense_table.html" %}{% endwith %}
+
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    <a class="btn {% if page <= 1 %}disabled{% endif %}"
+       href="?q={{ q }}&category={{ category }}&payment={{ payment }}&period={{ period }}&page={{ page - 1 if page > 1 else 1 }}">&larr;</a>
+    {% for p in page_slots %}
+      {% if p is none %}<span class="gap">&hellip;</span>
+      {% else %}
+      <a class="btn {% if p == page %}current{% endif %}"
+         href="?q={{ q }}&category={{ category }}&payment={{ payment }}&period={{ period }}&page={{ p }}">{{ p }}</a>
+      {% endif %}
+    {% endfor %}
+    <a class="btn"
+       href="?q={{ q }}&category={{ category }}&payment={{ payment }}&period={{ period }}&page={{ page + 1 if page < total_pages else total_pages }}">&rarr;</a>
+    <span class="count">Showing {{ showing_from }} to {{ showing_to }} of {{ count }}</span>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="page-title">{{ greeting }}, {{ user_name }} &#128075;</div>
+    <div class="page-sub">Here's your financial overview</div>
+  </div>
+</div>
+
+<div class="stat-grid">
+  {% for s in stats %}
+  <div class="stat-card">
+    <div class="stat-icon">{{ s.icon }}</div>
+    <div class="stat-label">{{ s.label }}</div>
+    <div class="stat-value">{{ s.value }}</div>
+    <div class="stat-sub">{{ s.sub }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row-2">
+  <div class="card">
+    <div class="card-title">Quick Add Expense</div>
+    <form method="post" action="/quick-add">
+      <input type="text" name="text" placeholder="e.g. 500 at McDonald's" required
+             style="margin-bottom:12px;">
+      <button class="btn btn-primary btn-block" type="submit">Add Expense</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Monthly Budget</div>
+    {% if budget > 0 %}
+      <div class="budget-figures">
+        <span class="budget-spent">&#8377;{{ spent_fmt }}</span>
+        <span class="budget-total">/ &#8377;{{ budget_fmt }}</span>
+      </div>
+      <div class="progress"><div class="progress-fill" style="width: {{ pct }}%"></div></div>
+      <div class="budget-meta">
+        <span>{{ pct }}% used</span><span class="dot">&bull;</span>
+        <span>&#8377;{{ left_fmt }} left</span>
+      </div>
+    {% else %}
+      <div class="page-sub" style="margin:0 0 12px;">No budget set for this month.</div>
+    {% endif %}
+    <form method="post" action="/budget" class="form-row" style="margin-bottom:0;">
+      <input type="number" name="amount" step="100" min="0" value="{{ budget|int }}"
+             placeholder="Monthly budget">
+      <button class="btn" type="submit">&#9998; Save Budget</button>
+    </form>
+  </div>
+</div>
+
+<div class="row-even">
+  <div class="card">
+    <div class="card-title">Spending by Category
+      <button class="expand-btn" type="button" onclick="toggleChart('pie')">&#9974;</button>
+    </div>
+    <div id="pie" class="chart"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Monthly Trend
+      <button class="expand-btn" type="button" onclick="toggleChart('trend')">&#9974;</button>
+    </div>
+    <div id="trend" class="chart"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Recent Expenses</div>
+  {% with back_url = '/' %}{% include "partials/expense_table.html" %}{% endwith %}
+</div>
+
+<div class="card">
+  <div class="card-title">Insights For You</div>
+  {% for icon, text in insights %}
+  <div class="insight"><span class="ico">{{ icon }}</span><span>{{ text }}</span></div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  drawDonut('pie', {{ pie.labels|tojson }}, {{ pie.data|tojson }},
+            {{ pie.colors|tojson }}, {{ pie.total|tojson }});
+  drawTrend('trend', {{ trend.x|tojson }}, {{ trend.y|tojson }}, 'Day');
+</script>
+{% endblock %}

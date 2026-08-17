@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Smart Expense Tracker{% endblock %}</title>
+<link rel="stylesheet" href="/static/css/app.css">
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">&#8377;</div>
+      <div>
+        <div class="brand-title">SMART<br>EXPENSE<br>TRACKER</div>
+        <div class="brand-sub">TRACK EVERY RUPEE</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      {% for key, icon, label, href in nav_items %}
+      <a class="nav-item {% if active == key %}active{% endif %}" href="{{ href }}">
+        <span class="ico">{{ icon }}</span><span>{{ label }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+
+    <!-- margin-top:auto on .sidebar-footer pins this to the bottom, in normal
+         flow, so it can never overlap the nav above it. -->
+    <div class="sidebar-footer">
+      <div class="profile">
+        <div class="avatar">{{ user_initials }}</div>
+        <div class="profile-text">
+          <div class="profile-name" title="{{ user_name }}">{{ user_name }}</div>
+          <div class="profile-sub">Signed in</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

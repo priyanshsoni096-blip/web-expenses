@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="page-title">Categories</div>
+    <div class="page-sub">{{ rows|length }} categories</div>
+  </div>
+</div>
+
+<div class="row-2">
+  <div class="card">
+    <div class="card-title">Category Breakdown</div>
+    <div id="c-pie" class="chart"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Add a Category</div>
+    <form method="post" action="/categories/add">
+      <label class="field">Name</label>
+      <input type="text" name="name" placeholder="e.g. Subscriptions" required>
+      <div class="form-row" style="margin-top:12px;">
+        <div><label class="field">Icon</label>
+          <input type="text" name="icon" value="&#127991;" maxlength="4"></div>
+        <div><label class="field">Colour</label>
+          <input type="text" name="color" value="#9CA3AF"></div>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit" style="margin-top:12px;">
+        &#43; Add Category</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">All Categories ({{ rows|length }})</div>
+  {% for r in rows %}
+  <div class="merchant-row">
+    <div class="merchant-name">
+      <span class="tag" style="color: {{ r.color }}">{{ r.icon }} {{ r.name }}</span>
+    </div>
+    <div style="display:flex; gap:16px; align-items:center;">
+      <span><strong>&#8377;{{ r.amount }}</strong></span>
+      <span class="stat-sub">{{ r.pct }}%</span>
+      <span class="stat-sub">{{ r.count }} txn</span>
+      {% if r.id %}
+      <form method="post" action="/categories/{{ r.id }}/delete"
+            onsubmit="return confirm('Delete this category?')">
+        <button class="btn btn-icon btn-danger" type="submit">&#128465;</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  drawDonut('c-pie', {{ pie.labels|tojson }}, {{ pie.data|tojson }},
+            {{ pie.colors|tojson }}, {{ pie.total|tojson }});
+</script>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="page-title">Analytics</div>
+    <div class="page-sub">Where your money actually goes</div>
+  </div>
+</div>
+
+<div class="stat-grid">
+  {% for s in stats %}
+  <div class="stat-card">
+    <div class="stat-label">{{ s.label }}</div>
+    <div class="stat-value">{{ s.value }}</div>
+    <div class="stat-sub">{{ s.sub }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row-even">
+  <div class="card">
+    <div class="card-title">Expenses by Category
+      <button class="expand-btn" type="button" onclick="toggleChart('a-pie')">&#9974;</button>
+    </div>
+    <div id="a-pie" class="chart"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Expenses Over Time
+      <button class="expand-btn" type="button" onclick="toggleChart('a-trend')">&#9974;</button>
+    </div>
+    <div id="a-trend" class="chart"></div>
+  </div>
+</div>
+
+<div class="row-even">
+  <div class="card">
+    <div class="card-title">Payment Mode Distribution</div>
+    <div id="a-pm" class="chart"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Top Merchants</div>
+    {% for m in merchants %}
+    <div class="merchant-row">
+      <div class="merchant-name">
+        <span class="rank">{{ m.rank }}</span>
+        <span>{{ m.name }} ({{ m.count }}x)</span>
+      </div>
+      <div><strong>&#8377;{{ m.amount }}</strong>
+        <span class="stat-sub">({{ m.pct }}%)</span></div>
+    </div>
+    {% else %}
+    <div class="empty">No merchant data yet.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Insights</div>
+  <div class="tile-grid">
+    {% for label, value, sub in tiles %}
+    <div>
+      <div class="tile-label">{{ label }}</div>
+      <div class="tile-value">{{ value }}</div>
+      {% if sub %}<div class="tile-sub">{{ sub }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  drawDonut('a-pie', {{ pie.labels|tojson }}, {{ pie.data|tojson }},
+            {{ pie.colors|tojson }}, {{ pie.total|tojson }});
+  drawTrend('a-trend', {{ trend.x|tojson }}, {{ trend.y|tojson }}, 'Date');
+  drawBars('a-pm', {{ pm_chart.labels|tojson }}, {{ pm_chart.data|tojson }});
+</script>
+{% endblock %}

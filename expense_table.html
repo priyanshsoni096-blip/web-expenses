@@ -1,0 +1,64 @@
+{# Shared by the dashboard and history pages. #}
+<div class="table-wrap">
+  <div class="exp-row exp-head">
+    <div>Date</div><div>Merchant</div><div>Category</div>
+    <div>Amount</div><div>Payment Mode</div><div></div>
+  </div>
+
+  {% for r in rows %}
+  <div class="exp-row">
+    <div class="exp-cell">
+      <div class="exp-cell-label">Date</div>&#128197; {{ r.date }}
+    </div>
+    <div class="exp-cell exp-cell-merchant">
+      <div class="exp-cell-label">Merchant</div>
+      <div class="exp-merchant">{{ r.merchant }}</div>
+      {% if r.notes %}<div class="exp-note">{{ r.notes }}</div>{% endif %}
+    </div>
+    <div class="exp-cell">
+      <div class="exp-cell-label">Category</div>
+      <span class="tag" style="color: {{ r.cat_color }}">{{ r.cat_icon }} {{ r.category }}</span>
+    </div>
+    <div class="exp-cell">
+      <div class="exp-cell-label">Amount</div>
+      <div class="exp-amount">&#8377;{{ r.amount_fmt }}</div>
+    </div>
+    <div class="exp-cell">
+      <div class="exp-cell-label">Payment Mode</div>{{ r.payment_icon }} {{ r.payment_mode }}
+    </div>
+    <div class="exp-cell exp-actions">
+      <button class="btn btn-icon" type="button" onclick="toggleEdit('{{ r.id }}')" title="Edit">&#9998;</button>
+      <form method="post" action="/expense/{{ r.id }}/delete" onsubmit="return confirm('Delete this expense?')">
+        <input type="hidden" name="back" value="{{ back_url|default('/history') }}">
+        <button class="btn btn-icon btn-danger" type="submit" title="Delete">&#128465;</button>
+      </form>
+    </div>
+  </div>
+
+  <form method="post" action="/expense/{{ r.id }}/update" class="card" id="edit-{{ r.id }}" style="display:none; margin:8px 0;">
+    <input type="hidden" name="back" value="{{ back_url|default('/history') }}">
+    <div class="form-row">
+      <div><label class="field">Merchant</label>
+        <input type="text" name="merchant" value="{{ r.merchant }}"></div>
+      <div><label class="field">Amount</label>
+        <input type="number" step="0.01" name="amount" value="{{ r.amount }}"></div>
+    </div>
+    <div class="form-row">
+      <div><label class="field">Category</label>
+        <select name="category">
+          {% for c in categories %}<option value="{{ c }}" {% if c == r.category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select></div>
+      <div><label class="field">Payment Mode</label>
+        <select name="payment_mode">
+          {% for p in payment_modes %}<option value="{{ p }}" {% if p == r.payment_mode %}selected{% endif %}>{{ p }}</option>{% endfor %}
+        </select></div>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" type="submit">&#10003; Save</button>
+      <button class="btn" type="button" onclick="toggleEdit('{{ r.id }}')">&#10005; Cancel</button>
+    </div>
+  </form>
+  {% else %}
+  <div class="empty">No expenses to show.</div>
+  {% endfor %}
+</div>
