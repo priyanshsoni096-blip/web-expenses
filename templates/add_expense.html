@@ -4,7 +4,7 @@
 <div class="page-head">
   <div>
     <div class="page-title">Add Expense</div>
-    <div class="page-sub">Type, speak or pick an example &mdash; we'll parse the rest</div>
+    <div class="page-sub">Type, speak or pick an example &mdash; we'll work out the rest</div>
   </div>
   <button class="btn" type="button" onclick="toggleHelp()">&#10067; How it works?</button>
 </div>
@@ -13,7 +13,7 @@
   Describe the spend the way you'd say it out loud. Amount, merchant and category
   are worked out for you, and several expenses in one sentence are split apart.
   English, Hindi and Hinglish all work &mdash; "500 at McDonald's and 200 for cab",
-  "&#2346;&#2366;&#2306;&#2330; &#2360;&#2380; &#2352;&#2369;&#2346;&#2351;&#2375;", "sabzi 150 aur dudh 60". Nothing is saved until you review it.
+  "&#2346;&#2366;&#2306;&#2330; &#2360;&#2380; &#2352;&#2369;&#2346;&#2351;&#2375;", "sabzi 150 aur dudh 60". Nothing is saved until you confirm it.
 </div>
 
 <!-- Mode toggle: both halves are <button>s with the same box, so the active one
@@ -75,7 +75,7 @@
   </div>
 
   <!-- One form serves both panels: voice fills the same textarea typing does,
-       so the parser, review step and save flow are shared. -->
+       so parsing, confirming and saving are all one code path. -->
   <form method="post" action="/add/parse" id="parse-form">
     <input type="hidden" name="mode" id="mode-field" value="{{ mode }}">
     <div style="display:flex; justify-content:space-between; align-items:center; gap:var(--gap); margin-top:12px;">
@@ -109,7 +109,10 @@
 {% endif %}
 
 {% if drafts %}
-<form method="post" action="/add/save">
+<!-- data-parsed records the exact text these results came from. JS compares the
+     textarea against it and hides everything below whenever they differ, so what
+     you see always belongs to the last time you pressed Enter. -->
+<form method="post" action="/add/save" id="results" data-parsed="{{ text }}">
   <input type="hidden" name="raw_text" value="{{ text }}">
 
   <div class="card">
@@ -184,4 +187,9 @@
   </div>
 </form>
 {% endif %}
+
+<div class="flash flash-err" id="stale-hint" style="display:none;">
+  &#9888; The text above has changed. Press <strong>Enter</strong> to see the
+  updated result.
+</div>
 {% endblock %}

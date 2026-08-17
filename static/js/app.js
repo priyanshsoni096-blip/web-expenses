@@ -110,6 +110,7 @@
     box.value = text.trim();
     box.focus();
     updateCounter();
+    syncPreviewFreshness();
   }
   
   function updateCounter() {
@@ -118,10 +119,28 @@
     if (box && out) out.textContent = box.value.length + '/300';
   }
   
+  /* Results are rendered by the server for one specific piece of text. If the box is
+     edited afterwards, what is on screen no longer matches it - so the results are
+     hidden and replaced with a prompt to press Enter. The rule stays simple: what
+     you see below is always the result of the last Enter. */
+  function syncPreviewFreshness() {
+    const box = document.getElementById('expense-text');
+    const results = document.getElementById('results');
+    const hint = document.getElementById('stale-hint');
+    if (!box) return;
+    const parsed = results ? (results.dataset.parsed || '') : '';
+    const fresh = box.value.trim() === parsed.trim();
+    if (results) results.style.display = fresh ? 'block' : 'none';
+    if (hint) hint.style.display = (fresh || !box.value.trim()) ? 'none' : 'block';
+  }
+  
   function initCounter() {
     const box = document.getElementById('expense-text');
     if (!box) return;
-    box.addEventListener('input', updateCounter);
+    box.addEventListener('input', function () {
+      updateCounter();
+      syncPreviewFreshness();
+    });
     /* A textarea does not submit on Enter the way an input does, so wire it up:
        Enter submits, Shift+Enter still inserts a newline. */
     box.addEventListener('keydown', function (e) {
@@ -131,6 +150,7 @@
       }
     });
     updateCounter();
+    syncPreviewFreshness();
   }
   
   /* =========================================================================
@@ -224,7 +244,10 @@
     if (field) field.value = mode;
   
     const title = document.getElementById('step1-title');
-    if (title) title.textContent = speak ? '1. Speak your expense' : '1. Describe your expense';
+    /* Must match the wording in add_expense.html. This line still said
+       "1. Speak your expense" after the step numbers were dropped from the
+       template, so switching tabs silently put the number back. */
+    if (title) title.textContent = speak ? 'Speak your expense' : 'Describe your expense';
   
     if (!speak) stopDictation();
   }
@@ -330,7 +353,7 @@
         if (event.results[i].isFinal) finalText += chunk; else interim += chunk;
       }
       const heard = (finalText || interim).trim();
-      if (box && heard) { box.value = heard; updateCounter(); }
+      if (box && heard) { box.value = heard; updateCounter(); syncPreviewFreshness(); }
       if (finalText) {
         showTranscript(finalText.trim(), langLabel);
         /* Deliberately NOT submitting automatically - you review what was heard and
