@@ -24,7 +24,9 @@ from typing import Optional
 
 import pandas as pd
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi import Response
+from fastapi.responses import (HTMLResponse, PlainTextResponse,
+                               RedirectResponse, StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -54,7 +56,15 @@ def asset_version() -> str:
             pass
     return str(stamp)
 
+from fastapi.exceptions import HTTPException
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 PAYMENT_MODES = ["Cash", "UPI", "Card", "Other"]
+
+# Firestore documents are capped at 1 MiB. A data URL is base64, so ~4 characters
+# per 3 bytes; 700_000 characters leaves comfortable room for the rest of the
+# document. The browser enforces the same figure before it ever uploads.
+MAX_RECEIPT_CHARS = 700_000
 PAYMENT_ICONS = {"Cash": "💵", "UPI": "📱", "Card": "💳", "Other": "🔁"}
 DEFAULT_USER_NAME = "there"
 
@@ -142,8 +152,41 @@ def _rows_for_template(df: pd.DataFrame, cats: dict) -> list:
             "amount_fmt": f"{float(r['amount'] or 0):,.2f}",
             "payment_mode": r.get("payment_mode") or "Cash",
             "payment_icon": PAYMENT_ICONS.get(r.get("payment_mode") or "Cash", "💵"),
+            "receipt": r.get("receipt") or "",
+            "receipt_name": r.get("receipt_name") or "",
         })
     return rows
+
+
+@app.exception_handler(StarletteHTTPException)
+def http_error(request: Request, exc: StarletteHTTPException):
+    """Readable error pages.
+
+    A bare "Not Found" (Starlette's plain-text 404, which is what a missing
+    /static file returns) gives nothing to debug with. This names the path and
+    method that failed and offers a way back.
+    """
+    if exc.status_code == 404:
+        ctx = {
+            "request": request,
+            "asset_v": asset_version(),
+            "nav_items": NAV_ITEMS,
+            "active": "",
+            "user_name": "",
+            "user_initials": "?",
+            "current_path": "/",
+            "code": 404,
+            "title": "Page not found",
+            "detail": f"Nothing is served at {request.method} {request.url.path}",
+        }
+        return templates.TemplateResponse(request, "error.html", ctx, status_code=404)
+    return PlainTextResponse(f"{exc.status_code}: {exc.detail}", status_code=exc.status_code)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Browsers request this unprompted; answering stops it 404ing in the logs."""
+    return Response(status_code=204)
 
 
 # --------------------------------------------------------------------------
@@ -342,11 +385,20 @@ async def add_save(request: Request):
     them grouped without needing JavaScript to build a JSON payload.
     """
     form = await request.form()
+    # A receipt arrives as a data URL in a hidden field: the browser has already
+    # downscaled and encoded it, so there is no multipart upload, no image library
+    # on the server, and no separate storage bucket to configure.
+    receipt = str(form.get("receipt") or "")
+    if len(receipt) > MAX_RECEIPT_CHARS or not receipt.startswith("data:"):
+        receipt = ""   # oversized or not a data URL: drop it, keep the expense
+
     shared = {
         "date": form.get("date") or datetime.date.today().isoformat(),
         "payment_mode": form.get("payment_mode") or "Cash",
         "account": form.get("account") or "",
         "notes": form.get("notes") or "",
+        "receipt": receipt,
+        "receipt_name": str(form.get("receipt_name") or "")[:120],
     }
     idx = 0
     saved = 0

@@ -120,7 +120,8 @@ def load_expenses() -> pd.DataFrame:
         rows.append(data)
 
     columns = ["id", "date", "raw_text", "merchant", "amount", "category",
-               "source", "payment_mode", "account", "notes"]
+               "source", "payment_mode", "account", "notes",
+               "receipt", "receipt_name"]
     if not rows:
         return pd.DataFrame(columns=columns)
 
@@ -154,6 +155,11 @@ def save_expense(expense: dict) -> str:
         "payment_mode": expense.get("payment_mode", "Cash"),
         "account": expense.get("account", ""),
         "notes": expense.get("notes", ""),
+        # Receipt is stored inline as a data URL. Firestore caps a document at
+        # 1 MiB, so the browser downscales images before upload and anything that
+        # would not fit is rejected client-side rather than failing here.
+        "receipt": expense.get("receipt", ""),
+        "receipt_name": expense.get("receipt_name", ""),
     }
     _, ref = db.collection(COLLECTION).add(doc)
     return ref.id
@@ -170,7 +176,8 @@ def update_expense(doc_id: str, updates: dict) -> None:
     """
     db = _get_client()
     allowed_fields = {"merchant", "amount", "category", "raw_text", "source",
-                       "date", "payment_mode", "account", "notes"}
+                       "date", "payment_mode", "account", "notes",
+                       "receipt", "receipt_name"}
     clean_updates = {k: v for k, v in updates.items() if k in allowed_fields}
     if "amount" in clean_updates:
         clean_updates["amount"] = float(clean_updates["amount"] or 0)

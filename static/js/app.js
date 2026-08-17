@@ -25,6 +25,17 @@
     const el = document.getElementById(id);
     if (!el) return;
     if (!values.length) { el.innerHTML = '<div class="empty">No data yet.</div>'; return; }
+    /* On a phone the card is ~330px wide. A legend pinned to the right of the pie
+       leaves the chart itself a sliver, so below 420px it moves underneath and
+       runs horizontally instead. Measured from the element, not the viewport, so a
+       collapsed sidebar on a laptop gets the roomier version. */
+    const narrow = el.clientWidth > 0 && el.clientWidth < 420;
+    const legend = narrow
+      ? { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.05, yanchor: 'top',
+          font: { size: 10, color: THEME.text } }
+      : { orientation: 'v', x: 1, xanchor: 'left', y: 0.5, yanchor: 'middle',
+          font: { size: 11, color: THEME.text } };
+  
     Plotly.newPlot(el, [{
       type: 'pie', hole: 0.62, labels: labels, values: values,
       sort: false, direction: 'clockwise', textinfo: 'none',
@@ -32,8 +43,8 @@
       hovertemplate: '%{label}: ₹%{value:,.0f}<extra></extra>',
     }], baseLayout({
       showlegend: true,
-      legend: { orientation: 'v', x: 1, xanchor: 'left', y: 0.5, yanchor: 'middle',
-                font: { size: 11, color: THEME.text } },
+      margin: narrow ? { l: 4, r: 4, t: 4, b: 46 } : { l: 10, r: 10, t: 10, b: 10 },
+      legend: legend,
       annotations: [{
         text: '₹' + Math.round(total).toLocaleString('en-IN') +
               "<br><span style='font-size:9px;color:" + THEME.muted + "'>TOTAL</span>",
@@ -111,8 +122,52 @@
     const box = document.getElementById('expense-text');
     if (!box) return;
     box.addEventListener('input', updateCounter);
+    /* A textarea does not submit on Enter the way an input does, so wire it up:
+       Enter submits, Shift+Enter still inserts a newline. */
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        const form = document.getElementById('parse-form');
+        if (form && box.value.trim()) { e.preventDefault(); form.submit(); }
+      }
+    });
     updateCounter();
   }
+  
+  /* =========================================================================
+     MOBILE NAVIGATION DRAWER
+  
+     Toggling two classes; the animation and positioning are entirely CSS. Also
+     locks the page behind so it cannot scroll under the open drawer, and keeps
+     aria-expanded accurate for screen readers.
+     ========================================================================= */
+  
+  function setSidebar(open) {
+    const bar = document.getElementById('sidebar');
+    const scrim = document.getElementById('scrim');
+    const btn = document.getElementById('menu-btn');
+    if (!bar) return;
+    bar.classList.toggle('open', open);
+    if (scrim) scrim.classList.toggle('open', open);
+    document.body.classList.toggle('nav-open', open);
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  
+  function toggleSidebar() {
+    const bar = document.getElementById('sidebar');
+    setSidebar(!(bar && bar.classList.contains('open')));
+  }
+  
+  function closeSidebar() { setSidebar(false); }
+  
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeSidebar();
+  });
+  
+  /* If the window grows past the breakpoint while the drawer is open, drop the
+     classes so the desktop sidebar is not left with a scrim over the page. */
+  window.addEventListener('resize', function () {
+    if (window.innerWidth > 760) closeSidebar();
+  });
   
   /* =========================================================================
      SIDEBAR PROFILE — edit name
@@ -278,12 +333,12 @@
       if (box && heard) { box.value = heard; updateCounter(); }
       if (finalText) {
         showTranscript(finalText.trim(), langLabel);
-        /* Parse automatically. Previously the transcript appeared but the preview
-           below still showed the PREVIOUS parse, because the preview is rendered
-           server-side and only refreshes on submit - so it looked like speaking
-           had done nothing. Submitting for the user removes that gap entirely. */
-        setVoiceStatus('Heard "' + finalText.trim() + '" \u2014 parsing\u2026', 'live');
-        submitParse();
+        /* Deliberately NOT submitting automatically - you review what was heard and
+           press Enter yourself. The preview card names the text it was built from,
+           so a result left over from an earlier Enter cannot be mistaken for the
+           current one. */
+        setVoiceStatus('Heard "' + finalText.trim()
+          + '" \u2014 check it, then press Enter.', 'live');
       }
     };
   
@@ -319,21 +374,6 @@
       listening = false;
       setRecordingUI(false);
     }
-  }
-  
-  let parseSubmitted = false;
-  
-  function submitParse() {
-    /* Guarded: onresult can fire more than once for the same utterance, and a
-       double submit would post the form twice. */
-    if (parseSubmitted) return;
-    const form = document.getElementById('parse-form');
-    const box = document.getElementById('expense-text');
-    if (!form || !box || !box.value.trim()) return;
-    parseSubmitted = true;
-    stopDictation();
-    /* Brief pause so the transcript is legible before the page navigates. */
-    window.setTimeout(function () { form.submit(); }, 700);
   }
   
   function stopDictation() {
@@ -384,6 +424,14 @@
     });
   }
   
+  /* Rotating a phone crosses the 420px threshold, so the charts are rebuilt after
+     a resize settles. Debounced because resize fires continuously while dragging. */
+  let resizeTimer = null;
+  window.addEventListener('resize', function () {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(initCharts, 250);
+  });
+  
   document.addEventListener('DOMContentLoaded', function () {
     initCharts();
     initCounter();
@@ -393,3 +441,116 @@
     if (window.location.search.indexOf('err=budget') !== -1) toggleBudgetEdit(true);
     if (window.location.search.indexOf('err=name') !== -1) toggleNameEdit(true);
   });
+  
+  /* =========================================================================
+     RECEIPT ATTACHMENT
+  
+     The file is read, downscaled and base64-encoded in the browser, then posted as
+     a hidden field. Doing it client-side means:
+       - no multipart upload handling or image library on the server,
+       - no separate storage bucket to enable and pay for,
+       - a 4 MB phone photo becomes ~150 KB, which fits inside Firestore's 1 MiB
+         document limit alongside the rest of the expense.
+  
+     PDFs cannot be downscaled, so they are size-checked and rejected if too large
+     rather than silently failing on save.
+     ========================================================================= */
+  
+  const RECEIPT_MAX_CHARS = 700000;   /* must match MAX_RECEIPT_CHARS in main.py */
+  const RECEIPT_MAX_EDGE = 1400;      /* longest side after downscaling, px */
+  const RECEIPT_QUALITY = 0.72;
+  
+  function setReceiptStatus(msg, tone) {
+    const el = document.getElementById('receipt-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = tone === 'error' ? 'var(--red)'
+                   : tone === 'ok' ? 'var(--accent)' : 'var(--muted)';
+  }
+  
+  function clearReceipt() {
+    ['receipt-data', 'receipt-name'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const file = document.getElementById('receipt-file');
+    if (file) file.value = '';
+    const img = document.getElementById('receipt-preview');
+    if (img) { img.style.display = 'none'; img.removeAttribute('src'); }
+    const clear = document.getElementById('receipt-clear');
+    if (clear) clear.style.display = 'none';
+    setReceiptStatus('Photo or PDF of the receipt \u2014 optional');
+  }
+  
+  function storeReceipt(dataUrl, name) {
+    if (dataUrl.length > RECEIPT_MAX_CHARS) {
+      setReceiptStatus('That file is too large even after compressing. '
+        + 'Try a photo instead of a scan, or crop it first.', 'error');
+      clearReceipt();
+      return;
+    }
+    document.getElementById('receipt-data').value = dataUrl;
+    document.getElementById('receipt-name').value = name;
+    const kb = Math.round(dataUrl.length * 0.75 / 1024);
+    setReceiptStatus(name + ' \u2014 ' + kb + ' KB attached', 'ok');
+    const clear = document.getElementById('receipt-clear');
+    if (clear) clear.style.display = 'inline-flex';
+    if (dataUrl.indexOf('data:image') === 0) {
+      const img = document.getElementById('receipt-preview');
+      if (img) { img.src = dataUrl; img.style.display = 'block'; }
+    }
+  }
+  
+  function handleReceipt(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    setReceiptStatus('Processing\u2026');
+  
+    if (file.type === 'application/pdf') {
+      /* No way to shrink a PDF in the browser, so check the raw size. base64 is
+         roughly 4/3 of the original, hence the 0.75 factor. */
+      if (file.size > RECEIPT_MAX_CHARS * 0.75) {
+        setReceiptStatus('PDF is too large (max about '
+          + Math.round(RECEIPT_MAX_CHARS * 0.75 / 1024) + ' KB). '
+          + 'A photo of the receipt will usually be smaller.', 'error');
+        clearReceipt();
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function () { storeReceipt(String(reader.result), file.name); };
+      reader.onerror = function () { setReceiptStatus('Could not read that file.', 'error'); };
+      reader.readAsDataURL(file);
+      return;
+    }
+  
+    if (file.type.indexOf('image/') !== 0) {
+      setReceiptStatus('Only images and PDFs can be attached.', 'error');
+      clearReceipt();
+      return;
+    }
+  
+    const reader = new FileReader();
+    reader.onload = function () {
+      const img = new Image();
+      img.onload = function () {
+        const scale = Math.min(1, RECEIPT_MAX_EDGE / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        let out = canvas.toDataURL('image/jpeg', RECEIPT_QUALITY);
+        /* If it is still too big, step the quality down rather than refusing. */
+        let q = RECEIPT_QUALITY;
+        while (out.length > RECEIPT_MAX_CHARS && q > 0.3) {
+          q -= 0.12;
+          out = canvas.toDataURL('image/jpeg', q);
+        }
+        storeReceipt(out, file.name);
+      };
+      img.onerror = function () { setReceiptStatus('That image could not be read.', 'error'); };
+      img.src = String(reader.result);
+    };
+    reader.onerror = function () { setReceiptStatus('Could not read that file.', 'error'); };
+    reader.readAsDataURL(file);
+  }

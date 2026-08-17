@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="page-title">{{ code }} &mdash; {{ title }}</div>
+    <div class="page-sub">{{ detail }}</div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title">Where next</div>
+  <div style="display:flex; gap:var(--gap); flex-wrap:wrap;">
+    <a class="btn btn-primary" href="/">Dashboard</a>
+    <a class="btn" href="/add">Add Expense</a>
+    <a class="btn" href="/history">History</a>
+  </div>
+  <div class="info-line">
+    <span class="ico">&#8505;</span>
+    <span>If you reached this by pressing a button in the app, the path above is
+      what failed &mdash; that pins down which route is missing.</span>
+  </div>
+</div>
+{% endblock %}

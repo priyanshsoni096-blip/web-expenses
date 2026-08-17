@@ -8,9 +8,23 @@
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
 </head>
 <body>
+<!-- Phone-only top bar. Hidden by CSS above 760px. -->
+<header class="mobile-bar">
+  <button class="menu-btn" type="button" id="menu-btn"
+          aria-label="Open navigation" aria-expanded="false"
+          aria-controls="sidebar" onclick="toggleSidebar()">&#9776;</button>
+  <div class="mobile-brand">Smart Expense Tracker</div>
+</header>
+
+<!-- Backdrop. Stays in the DOM so the fade works in both directions; taps pass
+     through when closed because pointer-events is off. -->
+<div class="scrim" id="scrim" onclick="closeSidebar()" aria-hidden="true"></div>
+
 <div class="app">
 
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
+    <button class="drawer-close" type="button" aria-label="Close navigation"
+            onclick="closeSidebar()">&#10005;</button>
     <div class="brand">
       <div class="brand-icon">&#8377;</div>
       <div>
@@ -21,7 +35,8 @@
 
     <nav class="nav">
       {% for key, icon, label, href in nav_items %}
-      <a class="nav-item {% if active == key %}active{% endif %}" href="{{ href }}">
+      <a class="nav-item {% if active == key %}active{% endif %}" href="{{ href }}"
+         onclick="closeSidebar()">
         <span class="ico">{{ icon }}</span><span>{{ label }}</span>
       </a>
       {% endfor %}

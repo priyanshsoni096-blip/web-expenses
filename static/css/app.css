@@ -537,16 +537,115 @@
    .toolbar > * { flex: 1 1 180px; min-width: 0; }
    .toolbar .actions { flex: 0 0 auto; display: flex; gap: 8px; }
    
-   /* --- Narrow screens ------------------------------------------------------ */
+   /* =========================================================================
+      MOBILE NAVIGATION — off-canvas drawer
+   
+      On a phone the sidebar used to flatten into a header strip with the nav items
+      wrapping across two rows, which ate vertical space and read as a jumble. It is
+      now a real drawer: hidden off-screen, slid in by the hamburger, dismissed by
+      the scrim, the Escape key, or picking a page.
+   
+      The desktop layout is untouched - all of this lives inside the media query.
+      ========================================================================= */
+   
+   /* Top bar with the hamburger. Hidden on desktop. */
+   .mobile-bar { display: none; }
+   
    @media (max-width: 760px) {
-       .app { flex-direction: column; }
-       .sidebar {
-           width: 100%; flex: none; height: auto; position: static;
-           border-right: none; border-bottom: 1px solid var(--border);
+       .mobile-bar {
+           display: flex;
+           align-items: center;
+           gap: 12px;
+           position: sticky;
+           top: 0;
+           z-index: 40;
+           padding: 10px 14px;
+           background: var(--surface);
+           border-bottom: 1px solid var(--border);
        }
-       .nav { flex-direction: row; flex-wrap: wrap; }
-       .nav-item { flex: 1 1 auto; }
-       .sidebar-footer { margin-top: 16px; }
+       .menu-btn {
+           background: var(--surface-2);
+           border: 1px solid var(--border);
+           border-radius: 8px;
+           color: var(--text);
+           font-size: 18px;
+           line-height: 1;
+           /* 44px square: Apple's minimum comfortable touch target. */
+           min-width: 44px;
+           min-height: 44px;
+           cursor: pointer;
+       }
+       .menu-btn:active { border-color: var(--accent); color: var(--accent); }
+       .mobile-brand {
+           font-size: var(--fs-small);
+           font-weight: 700;
+           letter-spacing: 0.08em;
+           text-transform: uppercase;
+       }
+   
+       .app { flex-direction: column; }
+   
+       /* The drawer. transform rather than left/display so it animates on the GPU
+          and so it stays reachable by screen readers. 100dvh, not 100vh, because
+          mobile browsers shrink the visual viewport when the URL bar is showing and
+          100vh would run under it. */
+       .sidebar {
+           position: fixed;
+           top: 0;
+           bottom: 0;
+           left: 0;
+           width: min(82vw, 300px);
+           flex: none;
+           height: 100dvh;
+           z-index: 50;
+           transform: translateX(-100%);
+           transition: transform 0.22s ease;
+           border-right: 1px solid var(--border);
+           box-shadow: 2px 0 18px rgba(0, 0, 0, 0.45);
+       }
+       .sidebar.open { transform: translateX(0); }
+   
+       /* Dimmed backdrop. Kept in the DOM and faded so the transition works both
+          ways; pointer-events off when closed so it cannot swallow taps. */
+       .scrim {
+           position: fixed;
+           inset: 0;
+           z-index: 45;
+           background: rgba(0, 0, 0, 0.55);
+           opacity: 0;
+           pointer-events: none;
+           transition: opacity 0.22s ease;
+       }
+       .scrim.open { opacity: 1; pointer-events: auto; }
+   
+       /* While the drawer is open the page behind must not scroll. */
+       body.nav-open { overflow: hidden; }
+   
+       .drawer-close {
+           position: absolute;
+           top: 12px;
+           right: 12px;
+           background: none;
+           border: none;
+           color: var(--muted);
+           font-size: 20px;
+           min-width: 44px;
+           min-height: 44px;
+           cursor: pointer;
+       }
+       .drawer-close:active { color: var(--accent); }
+   
+       /* Full-width rows read better in a drawer than centred tabs. */
+       .nav { flex-direction: column; }
+       .nav-item { min-height: 46px; justify-content: flex-start; }
+       .nav-item span:not(.ico) { font-size: var(--fs-body); }
+   }
+   
+   /* Anything wider keeps the static sidebar, so the drawer classes must not
+      linger if the window is resized while it happens to be open. */
+   @media (min-width: 761px) {
+       .sidebar.open { transform: none; }
+       .scrim, .drawer-close { display: none; }
    }
    
    /* --- Voice input --------------------------------------------------------- */
@@ -768,3 +867,51 @@
    .profile-form input { font-size: var(--fs-small); padding: 8px 10px; }
    .profile-form-actions { display: flex; gap: 6px; }
    .profile-form-actions .btn { flex: 1 1 auto; min-height: 32px; }
+   
+   /* =========================================================================
+      PHONES
+      ========================================================================= */
+   
+   @media (max-width: 760px) {
+       /* iOS Safari zooms the entire page when you focus an input whose font-size
+          is below 16px, and leaves it zoomed afterwards. Our body scale bottoms out
+          at 11.5px, so every text field, number field and dropdown triggered it.
+          16px here is not a design choice - it is the threshold Safari checks. */
+       input[type="text"], input[type="number"], input[type="date"],
+       select, textarea {
+           font-size: 16px !important;
+       }
+   
+       /* Two buttons fit side by side even at 375px; stacking them wasted a whole
+          row of vertical space on the smallest screens. */
+       .mode-toggle { grid-template-columns: 1fr 1fr; }
+       .mode-btn { padding: 11px 8px; font-size: var(--fs-small); }
+   
+       /* 44px is Apple's minimum comfortable touch target. The edit and delete
+          buttons in each expense row were 36px and awkward to hit accurately. */
+       .btn-icon { min-height: 44px; min-width: 44px; }
+       .exp-actions { gap: 10px; }
+   
+       /* Give the cards a little more room by trimming the page gutter. */
+       .main { padding: 16px 14px 32px; }
+   
+       /* Room for the drawer's close button beside the wordmark. */
+       .brand { padding-bottom: 12px; margin-bottom: 10px; padding-right: 44px; }
+   }
+   
+   /* --- Receipt attachment --------------------------------------------------- */
+   .upload-row { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
+   .upload-row .btn { flex: 0 0 auto; }
+   .upload-row .stat-sub { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+   .receipt-preview {
+       display: block;
+       max-width: min(100%, 260px);
+       max-height: 200px;
+       margin-top: 14px;
+       border: 1px solid var(--border);
+       border-radius: 8px;
+       object-fit: contain;
+       background: var(--surface-2);
+   }
+   .receipt-link { margin-left: 6px; text-decoration: none; opacity: 0.85; }
+   .receipt-link:hover { opacity: 1; }

@@ -31,7 +31,7 @@
 
 <div class="card">
   <div class="card-title" id="step1-title">
-    {% if mode == 'speak' %}1. Speak your expense{% else %}1. Describe your expense{% endif %}
+    {% if mode == 'speak' %}Speak your expense{% else %}Describe your expense{% endif %}
   </div>
 
   <!-- SPEAK ------------------------------------------------------------- -->
@@ -69,7 +69,7 @@
 
   <!-- TYPE -------------------------------------------------------------- -->
   <div id="panel-type" {% if mode == 'speak' %}style="display:none;"{% endif %}>
-    <label class="field" for="expense-text">Describe your expense (&#2326;&#2352;&#2381;&#2330; &#2325;&#2375; &#2346;&#2352;&#2375; &#2350;&#2375;&#2306; &#2348;&#2340;&#2366;&#2319;&#2306;)</label>
+    <label class="field" for="expense-text">In English, Hindi or Hinglish</label>
     <textarea name="text" id="expense-text" maxlength="300" form="parse-form"
               placeholder="500 at McDonald's and 200 for shopping">{{ text }}</textarea>
   </div>
@@ -80,7 +80,7 @@
     <input type="hidden" name="mode" id="mode-field" value="{{ mode }}">
     <div style="display:flex; justify-content:space-between; align-items:center; gap:var(--gap); margin-top:12px;">
       <span class="stat-sub" id="counter">0/300</span>
-      <button class="btn btn-primary" type="submit">&crarr; Parse</button>
+      <button class="btn btn-primary" type="submit">&crarr; Enter</button>
     </div>
   </form>
 
@@ -113,9 +113,9 @@
   <input type="hidden" name="raw_text" value="{{ text }}">
 
   <div class="card">
-    <div class="card-title">2. Parsed preview (review &amp; confirm)
+    <div class="card-title">What we found
       <span style="color:var(--accent); text-transform:none; letter-spacing:0;">
-        {{ drafts|length }} item(s) detected</span>
+        {{ drafts|length }} item{{ '' if drafts|length == 1 else 's' }}</span>
     </div>
 
     {% for d in drafts %}
@@ -143,7 +143,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">3. Details (optional)</div>
+    <div class="card-title">Details</div>
     <div class="form-row">
       <div><label class="field">Date</label>
         <input type="date" name="date" value="{{ today }}"></div>
@@ -152,10 +152,29 @@
           {% for p in payment_modes %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
         </select></div>
       <div><label class="field">Account</label>
-        <input type="text" name="account" placeholder="Optional"></div>
+        <input type="text" name="account" placeholder="e.g. HDFC, Paytm"></div>
     </div>
     <label class="field">Notes</label>
-    <textarea name="notes" placeholder="Add a note (optional)" style="min-height:70px;"></textarea>
+    <textarea name="notes" placeholder="Anything worth remembering" style="min-height:70px;"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Attachment</div>
+    <!-- Images are downscaled in the browser before upload, so a phone photo of a
+         receipt lands well inside Firestore's 1 MiB document limit without needing
+         a separate storage bucket. -->
+    <input type="hidden" name="receipt" id="receipt-data">
+    <input type="hidden" name="receipt_name" id="receipt-name">
+    <div class="upload-row">
+      <label class="btn" for="receipt-file">&#11014; Choose file</label>
+      <input type="file" id="receipt-file" accept="image/*,application/pdf"
+             onchange="handleReceipt(this)" hidden>
+      <span class="stat-sub" id="receipt-status">
+        Photo or PDF of the receipt &mdash; optional</span>
+      <button class="btn btn-icon btn-danger" type="button" id="receipt-clear"
+              onclick="clearReceipt()" title="Remove" style="display:none;">&#10005;</button>
+    </div>
+    <img id="receipt-preview" class="receipt-preview" alt="Receipt preview" style="display:none;">
   </div>
 
   <div style="display:flex; gap:var(--gap); flex-wrap:wrap;">
