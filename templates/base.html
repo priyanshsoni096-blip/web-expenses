@@ -29,14 +29,29 @@
 
     <!-- margin-top:auto on .sidebar-footer pins this to the bottom, in normal
          flow, so it can never overlap the nav above it. -->
+    <!-- margin-top:auto on .sidebar-footer pins this to the bottom, in normal
+         flow, so it can never overlap the nav above it. -->
     <div class="sidebar-footer">
-      <div class="profile">
+      <div class="profile" id="profile-view">
         <div class="avatar">{{ user_initials }}</div>
         <div class="profile-text">
           <div class="profile-name" title="{{ user_name }}">{{ user_name }}</div>
-          <div class="profile-sub">Signed in</div>
+          <button class="profile-edit" type="button" onclick="toggleNameEdit(true)">
+            Edit name</button>
         </div>
       </div>
+
+      <form method="post" action="/profile/name" class="profile profile-form"
+            id="profile-edit" style="display:none;">
+        <input type="hidden" name="back" value="{{ current_path }}">
+        <input type="text" name="name" id="profile-name-input" maxlength="40"
+               value="{{ user_name }}" placeholder="Your name" autocomplete="name">
+        <div class="profile-form-actions">
+          <button class="btn btn-primary btn-icon" type="submit" title="Save">&#10003;</button>
+          <button class="btn btn-icon" type="button" title="Cancel"
+                  onclick="toggleNameEdit(false)">&#10005;</button>
+        </div>
+      </form>
     </div>
   </aside>
 

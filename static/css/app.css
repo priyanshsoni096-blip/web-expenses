@@ -745,3 +745,26 @@
        flex: 1 1 auto;
        min-height: 0;
    }
+   
+   /* --- Sidebar profile: inline name editing -------------------------------- */
+   .profile-edit {
+       background: none;
+       border: none;
+       padding: 0;
+       margin-top: 2px;
+       color: var(--muted);
+       font-family: inherit;
+       font-size: var(--fs-small);
+       cursor: pointer;
+       text-align: left;
+       text-decoration: underline;
+       text-decoration-color: transparent;
+   }
+   .profile-edit:hover { color: var(--accent); text-decoration-color: var(--accent); }
+   
+   /* The edit form reuses .profile so the box does not change size or position
+      when it swaps in — the sidebar footer stays put instead of jumping. */
+   .profile-form { flex-direction: column; align-items: stretch; gap: 8px; }
+   .profile-form input { font-size: var(--fs-small); padding: 8px 10px; }
+   .profile-form-actions { display: flex; gap: 6px; }
+   .profile-form-actions .btn { flex: 1 1 auto; min-height: 32px; }

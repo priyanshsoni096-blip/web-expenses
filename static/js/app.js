@@ -115,6 +115,22 @@
   }
   
   /* =========================================================================
+     SIDEBAR PROFILE — edit name
+     ========================================================================= */
+  
+  function toggleNameEdit(editing) {
+    const view = document.getElementById('profile-view');
+    const form = document.getElementById('profile-edit');
+    if (!view || !form) return;
+    view.style.display = editing ? 'none' : 'flex';
+    form.style.display = editing ? 'flex' : 'none';
+    if (editing) {
+      const input = document.getElementById('profile-name-input');
+      if (input) { input.focus(); input.select(); }
+    }
+  }
+  
+  /* =========================================================================
      MONTHLY BUDGET — edit on demand
   
      The card shows the figures plus an Edit button; the input and Save appear only
@@ -375,4 +391,5 @@
     /* If the budget save was rejected, reopen the editor so the correction can be
        made where the error is shown, rather than needing another click. */
     if (window.location.search.indexOf('err=budget') !== -1) toggleBudgetEdit(true);
+    if (window.location.search.indexOf('err=name') !== -1) toggleNameEdit(true);
   });

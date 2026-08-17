@@ -275,3 +275,33 @@ def get_budget() -> float:
 def set_budget(amount: float) -> None:
     db = _get_client()
     db.collection(SETTINGS_COLLECTION).document(BUDGET_DOC_ID).set({"amount": float(amount)})
+
+
+# --- Profile ---------------------------------------------------------------
+
+PROFILE_DOC_ID = "profile"
+NAME_MAX_LEN = 40
+
+
+def get_user_name(default: str = "there") -> str:
+    """The display name, or `default` if none has been set."""
+    db = _get_client()
+    doc = db.collection(SETTINGS_COLLECTION).document(PROFILE_DOC_ID).get()
+    if doc.exists:
+        name = str((doc.to_dict() or {}).get("name", "")).strip()
+        if name:
+            return name
+    return default
+
+
+def set_user_name(name: str) -> None:
+    """Store the display name. Trimmed and length-capped so a stray paste cannot
+    break the sidebar layout. merge=True so this never clobbers other settings
+    that may live on the same document later."""
+    cleaned = str(name).strip()[:NAME_MAX_LEN]
+    if not cleaned:
+        return
+    db = _get_client()
+    db.collection(SETTINGS_COLLECTION).document(PROFILE_DOC_ID).set(
+        {"name": cleaned}, merge=True
+    )

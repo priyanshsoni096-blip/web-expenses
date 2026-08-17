@@ -56,7 +56,7 @@ def asset_version() -> str:
 
 PAYMENT_MODES = ["Cash", "UPI", "Card", "Other"]
 PAYMENT_ICONS = {"Cash": "💵", "UPI": "📱", "Card": "💳", "Other": "🔁"}
-USER_NAME = "sachi"
+DEFAULT_USER_NAME = "there"
 
 NAV_ITEMS = [
     ("dashboard", "🏠", "Dashboard", "/"),
@@ -94,14 +94,29 @@ def _greeting() -> str:
     return "Good evening"
 
 
+def _safe_back(path: str, fallback: str = "/") -> str:
+    """Only allow same-site absolute paths as a redirect target.
+
+    A `back` value is posted by forms so you return to the page you were on.
+    Rejecting anything that isn't a single-slash-prefixed path stops that field
+    being used as an open redirect to another site.
+    """
+    if not path or not path.startswith("/") or path.startswith("//"):
+        return fallback
+    return path
+
+
 def _base_context(request: Request, active: str) -> dict:
+    name = storage.get_user_name(DEFAULT_USER_NAME)
     return {
         "request": request,
         "asset_v": asset_version(),
         "nav_items": NAV_ITEMS,
         "active": active,
-        "user_name": USER_NAME,
-        "user_initials": _initials(USER_NAME),
+        "user_name": name,
+        "user_initials": _initials(name),
+        # So the name form can send you back to the page you were on.
+        "current_path": request.url.path,
     }
 
 
@@ -212,10 +227,12 @@ def dashboard(request: Request, ok: str = "", err: str = ""):
         "insights": insights,
         "categories": list(cats.keys()),
         "payment_modes": PAYMENT_MODES,
-        "flash_ok": {"budget": "Budget saved.", "added": "Expense added."}.get(ok),
+        "flash_ok": {"budget": "Budget saved.", "added": "Expense added.",
+                     "name": "Name updated."}.get(ok),
         "flash_err": {
             "budget": "Enter a number for the budget, e.g. 35000.",
             "noamount": "No amount detected - include a number, e.g. \"500 at McDonald's\".",
+            "name": "Enter a name.",
         }.get(err),
     })
     return templates.TemplateResponse(request, "dashboard.html", ctx)
@@ -254,6 +271,15 @@ def _parse_money(raw: str) -> Optional[float]:
         return float(cleaned)
     except ValueError:
         return None
+
+
+@app.post("/profile/name")
+def update_user_name(name: str = Form(""), back: str = Form("/")):
+    target = _safe_back(back)
+    if not name.strip():
+        return RedirectResponse(f"{target}?err=name", status_code=303)
+    storage.set_user_name(name)
+    return RedirectResponse(f"{target}?ok=name", status_code=303)
 
 
 @app.post("/budget")
@@ -427,7 +453,7 @@ def history(request: Request, q: str = "", category: str = "All",
 @app.post("/expense/{doc_id}/delete")
 def delete_expense(doc_id: str, back: str = Form("/history")):
     storage.delete_expense(doc_id)
-    return RedirectResponse(back, status_code=303)
+    return RedirectResponse(_safe_back(back, "/history"), status_code=303)
 
 
 @app.post("/expense/{doc_id}/update")
@@ -439,7 +465,7 @@ def update_expense(doc_id: str,
         "merchant": merchant, "amount": amount,
         "category": category, "payment_mode": payment_mode,
     })
-    return RedirectResponse(back, status_code=303)
+    return RedirectResponse(_safe_back(back, "/history"), status_code=303)
 
 
 @app.get("/export")
