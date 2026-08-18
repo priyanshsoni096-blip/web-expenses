@@ -933,7 +933,12 @@
           explicitly, full width, with a real gap. */
        .page-head { flex-direction: column; align-items: stretch; gap: 12px; }
        .page-head > .btn, .page-head > a.btn { width: 100%; }
+       /* .page-sub normally carries the 22px that separates the header from the
+          content below it. Zeroing it here (the stacked header supplies its own gap)
+          left the last item - Export CSV, or "How it works?" - flush against the
+          cards underneath, so the header needs its own bottom margin instead. */
        .page-sub { margin-bottom: 0; }
+       .page-head { margin-bottom: var(--gap); }
        .mode-toggle { margin-top: 4px; }
    }
    
