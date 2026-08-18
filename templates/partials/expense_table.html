@@ -7,7 +7,7 @@
 
   {% for r in rows %}
   <div class="exp-row">
-    <div class="exp-cell">
+    <div class="exp-cell exp-cell-date">
       <div class="exp-cell-label">Date</div>&#128197; {{ r.date }}
     </div>
     <div class="exp-cell exp-cell-merchant">
@@ -18,15 +18,15 @@
       </div>
       {% if r.notes %}<div class="exp-note">{{ r.notes }}</div>{% endif %}
     </div>
-    <div class="exp-cell">
+    <div class="exp-cell exp-cell-category">
       <div class="exp-cell-label">Category</div>
       <span class="tag" style="color: {{ r.cat_color }}">{{ r.cat_icon }} {{ r.category }}</span>
     </div>
-    <div class="exp-cell">
+    <div class="exp-cell exp-cell-amount">
       <div class="exp-cell-label">Amount</div>
       <div class="exp-amount">&#8377;{{ r.amount_fmt }}</div>
     </div>
-    <div class="exp-cell">
+    <div class="exp-cell exp-cell-payment">
       <div class="exp-cell-label">Payment Mode</div>{{ r.payment_icon }} {{ r.payment_mode }}
     </div>
     <div class="exp-cell exp-actions">

@@ -437,25 +437,54 @@
    }
    
    /* 660px is above the sum of the column minimums plus gaps, so the reflow always
-      happens before the grid can be strained. */
+      happens before the grid can be strained.
+   
+      The first version of this reflow simply stacked the six cells in two columns
+      and switched on the inline field labels. It did not overflow, but it read as a
+      wall of MERCHANT / DATE / AMOUNT / PAYMENT MODE captions - technically correct
+      and genuinely hard to scan.
+   
+      It is now laid out as a transaction card, using named grid areas so the DOM
+      order (date, merchant, category, amount, payment, actions) can be rearranged
+      into a sensible reading order without touching the markup:
+   
+          merchant .............. amount
+          category ................. date
+          payment ................ actions
+   
+      The labels go away entirely, because each value already identifies itself: the
+      amount carries a rupee sign, the date a calendar, the category is a coloured
+      chip, the payment mode an icon. */
    @container (max-width: 660px) {
        .exp-head { display: none; }
+   
        .exp-row {
-           grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-           row-gap: 6px;
-           padding: 14px 0;
+           grid-template-columns: minmax(0, 1fr) auto;
+           grid-template-areas:
+               "merchant amount"
+               "category date"
+               "payment  actions";
+           row-gap: 8px;
+           column-gap: 12px;
+           align-items: center;
+           padding: 16px 0;
        }
-       .exp-cell-merchant { grid-column: 1 / -1; order: -1; }
-       .exp-actions { grid-column: 1 / -1; justify-content: flex-start; }
-       .exp-cell-label {
-           display: block;
-           font-size: 9px;
-           letter-spacing: 0.06em;
-           text-transform: uppercase;
-           color: var(--muted);
-           margin-bottom: 3px;
-       }
-       .exp-merchant, .exp-note { white-space: normal; }
+   
+       .exp-cell-merchant  { grid-area: merchant; }
+       .exp-cell-amount    { grid-area: amount;   text-align: right; }
+       .exp-cell-category  { grid-area: category; }
+       .exp-cell-date      { grid-area: date;     text-align: right; color: var(--muted); font-size: var(--fs-small); }
+       .exp-cell-payment   { grid-area: payment;  color: var(--muted); font-size: var(--fs-small); }
+       .exp-actions        { grid-area: actions;  justify-content: flex-end; }
+   
+       /* No captions needed: every value is self-identifying. */
+       .exp-cell-label { display: none; }
+       .exp-cell { padding: 0; }
+   
+       /* Merchant and amount are the two things you scan for, so give them weight. */
+       .exp-merchant { font-size: var(--fs-page-sub); font-weight: 700; white-space: normal; }
+       .exp-note { white-space: normal; margin-top: 3px; }
+       .exp-amount { font-size: var(--fs-page-sub); }
    }
    
    /* =========================================================================
@@ -897,6 +926,15 @@
    
        /* Room for the drawer's close button beside the wordmark. */
        .brand { padding-bottom: 12px; margin-bottom: 10px; padding-right: 44px; }
+   
+       /* The page header is a flex row that wraps. On a phone the title took the
+          first line and "How it works?" dropped onto the second with no space of its
+          own, so it sat hard against the Type/Speak toggle beneath it. Stacking it
+          explicitly, full width, with a real gap. */
+       .page-head { flex-direction: column; align-items: stretch; gap: 12px; }
+       .page-head > .btn, .page-head > a.btn { width: 100%; }
+       .page-sub { margin-bottom: 0; }
+       .mode-toggle { margin-top: 4px; }
    }
    
    /* --- Receipt attachment --------------------------------------------------- */
